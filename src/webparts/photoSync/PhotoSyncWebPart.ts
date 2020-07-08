@@ -25,6 +25,7 @@ export interface IPhotoSyncWebPartProps {
     useFullWidth: boolean;
     appTitle: string;
     allowedUsers: IPropertyFieldGroupOrPerson[];
+    enableBulkUpdate: boolean;
 }
 
 export default class PhotoSyncWebPart extends BaseClientSideWebPart<IPhotoSyncWebPartProps> {
@@ -43,6 +44,7 @@ export default class PhotoSyncWebPart extends BaseClientSideWebPart<IPhotoSyncWe
         const element: React.ReactElement<IPhotoSyncProps> = React.createElement(
             PhotoSync,
             {
+                context: this.context,
                 displayMode: this.displayMode,
                 helper: this.helper,
                 useFullWidth: this.properties.useFullWidth,
@@ -51,7 +53,8 @@ export default class PhotoSyncWebPart extends BaseClientSideWebPart<IPhotoSyncWe
                     this.properties.appTitle = value;
                 },
                 openPropertyPane: this.openPropertyPane,
-                allowedUsers: this.properties.allowedUsers
+                allowedUsers: this.properties.allowedUsers,
+                enableBulkUpdate: this.properties.enableBulkUpdate
             }
         );
 
@@ -174,6 +177,13 @@ export default class PhotoSyncWebPart extends BaseClientSideWebPart<IPhotoSyncWe
                                 description: `${strings.PropAllowedUserInfo}`,
                                 key: 'allowedUsersInfoId'
                             }),
+                            PropertyFieldToggleWithCallout('enableBulkUpdate', {
+                                key: 'enableBulkUpdateFieldId',
+                                label: strings.PropEnableBUCallout,
+                                onText: 'ON',
+                                offText: 'OFF',
+                                checked: this.properties.enableBulkUpdate
+                            }),
                             PropertyFieldToggleWithCallout('useFullWidth', {
                                 key: 'useFullWidthFieldId',
                                 label: 'Use page full width',
@@ -190,7 +200,7 @@ export default class PhotoSyncWebPart extends BaseClientSideWebPart<IPhotoSyncWe
 
     protected async onPropertyPaneConfigurationStart() {
         this.context.statusRenderer.displayLoadingIndicator(this.domElement, 'Loading properties...');
-        let currentUserInfo: ISiteUserInfo = await this.helper.getCurrentUserInfo();
+        let currentUserInfo: ISiteUserInfo = await this.helper.getCurrentUserDefaultInfo();
         if (currentUserInfo.IsSiteAdmin)
             this.wpPropertyPages = this.getAdminWPProperties();
         else this.wpPropertyPages = this.getUserWPProperties();

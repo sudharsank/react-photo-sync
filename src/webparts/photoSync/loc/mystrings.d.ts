@@ -13,6 +13,7 @@ declare interface IPhotoSyncWebPartStrings {
     PropInfoTemplateLib: string;
     PropInfoNormalUser: string;
     PropAllowedUserInfo: string;
+    PropEnableBUCallout: string;
 
     DefaultAppTitle: string;
     PlaceholderIconText: string;
@@ -21,9 +22,17 @@ declare interface IPhotoSyncWebPartStrings {
     AccessCheckDesc: string;
     SitePrivilegeCheckLabel: string;
 
+    PPLPickerTitleText: string;
     PropsLoader: string;
     PropsUpdateLoader: string;
     AdminConfigHelp: string;
+    AccessDenied: string;
+
+    TabMenu1: string;
+    TabMenu2: string;
+    TabMenu3: string;
+    TabMenu4: string;
+    TabMenu5: string;
 }
 
 declare module 'PhotoSyncWebPartStrings' {

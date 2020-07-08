@@ -15,14 +15,14 @@ const ConfigPlaceholder: React.FunctionComponent<{}> = (props) => {
     const [loading, setLoading] = useState<boolean>(true);
 
     const _checkForSiteAdmin = async () => {
-        let currentUserInfo: ISiteUserInfo = await appContext.helper.getCurrentUserInfo();
+        let currentUserInfo: ISiteUserInfo = await appContext.helper.getCurrentUserDefaultInfo();
         setSiteAdmin(currentUserInfo.IsSiteAdmin);
         setLoading(false);
     };
 
     useEffect(() => {
         _checkForSiteAdmin();
-    }, [])
+    }, []);
 
     return (
         <>
@@ -45,6 +45,6 @@ const ConfigPlaceholder: React.FunctionComponent<{}> = (props) => {
                 )}
         </>
     );
-}
+};
 
 export default ConfigPlaceholder;

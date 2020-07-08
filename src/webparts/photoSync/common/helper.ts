@@ -12,13 +12,21 @@ import "@pnp/sp/folders";
 import { Web, IWeb } from "@pnp/sp/webs";
 import { ISiteUserInfo } from "@pnp/sp/site-users/types";
 import { PnPClientStorage, dateAdd } from '@pnp/common';
+import { IUserInfo } from './IModel';
 
 const storage = new PnPClientStorage();
 
-const userStorageKey: string = 'userInfo';
+const map: any = require('lodash/map');
+const intersection: any = require('lodash/intersection');
+const orderBy: any = require('lodash/orderBy');
+
+const userDefStorageKey: string = 'userDefaultInfo';
+const userCusStorageKey: string = 'userCustomInfo';
 
 export interface IHelper {
-    getCurrentUserInfo: () => Promise<ISiteUserInfo>;
+    getCurrentUserDefaultInfo: () => Promise<ISiteUserInfo>;
+    getCurrentUserCustomInfo: () => Promise<IUserInfo>;
+    checkCurrentUserGroup: (allowedGroups: string[], userGroups: string[]) => boolean;
 }
 
 export default class Helper implements IHelper {
@@ -46,14 +54,42 @@ export default class Helper implements IHelper {
         }
         return new Blob([ia], { type: mimeString });
     }
-
-    public getCurrentUserInfo = async (): Promise<ISiteUserInfo> => {
+    /**
+     * Get current logged in user default info.
+     */
+    public getCurrentUserDefaultInfo = async (): Promise<ISiteUserInfo> => {
         //return await this._web.currentUser.get();
-        let currentUserInfo: ISiteUserInfo = storage.local.get(userStorageKey);
+        let currentUserInfo: ISiteUserInfo = storage.local.get(userDefStorageKey);
         if (!currentUserInfo) {
             currentUserInfo = await this._web.currentUser.get();
-            storage.local.put(userStorageKey, currentUserInfo, dateAdd(new Date(), 'hour', 1));
+            storage.local.put(userDefStorageKey, currentUserInfo, dateAdd(new Date(), 'hour', 1));
         }
         return currentUserInfo;
+    }
+    /**
+     * Get current logged in user custom information.
+     */
+    public getCurrentUserCustomInfo = async (): Promise<IUserInfo> => {
+        let currentUserInfo = await this._web.currentUser.get();
+        let currentUserGroups = await this._web.currentUser.groups.get();
+        return ({
+            ID: currentUserInfo.Id,
+            Email: currentUserInfo.Email,
+            LoginName: currentUserInfo.LoginName,
+            DisplayName: currentUserInfo.Title,
+            IsSiteAdmin: currentUserInfo.IsSiteAdmin,
+            Groups: map(currentUserGroups, 'LoginName'),
+            Picture: '/_layouts/15/userphoto.aspx?size=S&username=' + currentUserInfo.UserPrincipalName,
+        });
+    }
+    /**
+     * Check current user is a member of groups or not.
+     */
+    public checkCurrentUserGroup = (allowedGroups: string[], userGroups: string[]): boolean => {
+        if (userGroups.length > 0) {
+            let diff: string[] = intersection(allowedGroups, userGroups);
+            if (diff && diff.length > 0) return true;
+        }
+        return false;
     }
 }
