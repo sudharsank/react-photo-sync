@@ -22,7 +22,13 @@ declare interface IPhotoSyncWebPartStrings {
     AccessCheckDesc: string;
     SitePrivilegeCheckLabel: string;
 
+    BtnUploadPhotoDataForSync: string;
+    BtnUpdatePhotoProps: string;
+    BtnAzurePhotoProps: string;
+
     PPLPickerTitleText: string;
+    Photo_UserListChanges: string;
+    Photo_UserListEmpty: string;
     PropsLoader: string;
     PropsUpdateLoader: string;
     AdminConfigHelp: string;

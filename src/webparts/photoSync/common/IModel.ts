@@ -15,3 +15,9 @@ export interface IUserInfo {
 	IsSiteAdmin: boolean;
 	Groups: string[];
 }
+export interface IUserPickerInfo {
+    Title: string;
+    LoginName: string;    
+    PhotoUrl: string;
+    AADPhotoUrl?: string;
+}

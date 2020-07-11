@@ -23,7 +23,13 @@ define([], function() {
     AccessCheckDesc: "Checking for access...",
     SitePrivilegeCheckLabel: "Checking site admin privilege...",
 
+    BtnUploadPhotoDataForSync: "Upload Data to Sync",
+    BtnUpdatePhotoProps: "Update User Properties",
+    BtnAzurePhotoProps: "Get Photo from Azure AD",
+
     PPLPickerTitleText: "Select users to sync their photos!",
+    Photo_UserListChanges: "Changes in user list, please remove the user from the table manually or reinitialize or get the photo again!",
+    Photo_UserListEmpty: "Since all the users have been removed, the table has been cleared!",
     PropsLoader: "Please wait...",
     PropsUpdateLoader: "Please wait, initializing the job to update the properties",
     AdminConfigHelp: "Please contact your site administrator to configure the webpart.",
