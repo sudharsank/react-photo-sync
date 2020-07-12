@@ -9,6 +9,7 @@ import {
 import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 
 import { CalloutTriggers } from '@pnp/spfx-property-controls/lib/PropertyFieldHeader';
+import { PropertyFieldListPicker, PropertyFieldListPickerOrderBy } from '@pnp/spfx-property-controls/lib/PropertyFieldListPicker';
 import { PropertyFieldToggleWithCallout } from '@pnp/spfx-property-controls/lib/PropertyFieldToggleWithCallout';
 import { PropertyPaneWebPartInformation } from '@pnp/spfx-property-controls/lib/PropertyPaneWebPartInformation';
 import { PropertyFieldPeoplePicker, PrincipalType, IPropertyFieldGroupOrPerson } from '@pnp/spfx-property-controls/lib/PropertyFieldPeoplePicker';
@@ -26,6 +27,8 @@ export interface IPhotoSyncWebPartProps {
     appTitle: string;
     allowedUsers: IPropertyFieldGroupOrPerson[];
     enableBulkUpdate: boolean;
+    tempLib: string;
+    deleteThumbnails: boolean;
 }
 
 export default class PhotoSyncWebPart extends BaseClientSideWebPart<IPhotoSyncWebPartProps> {
@@ -54,7 +57,9 @@ export default class PhotoSyncWebPart extends BaseClientSideWebPart<IPhotoSyncWe
                 },
                 openPropertyPane: this.openPropertyPane,
                 allowedUsers: this.properties.allowedUsers,
-                enableBulkUpdate: this.properties.enableBulkUpdate
+                enableBulkUpdate: this.properties.enableBulkUpdate,
+                tempLib: this.properties.tempLib,
+                deleteThumbnails: this.properties.deleteThumbnails
             }
         );
 
@@ -108,25 +113,34 @@ export default class PhotoSyncWebPart extends BaseClientSideWebPart<IPhotoSyncWe
                     {
                         groupName: strings.BasicGroupName,
                         groupFields: [
-                            // PropertyFieldListPicker('templateLib', {
-                            //     key: 'templateLibFieldId',
-                            //     label: strings.PropTemplateLibLabel,
-                            //     selectedList: this.properties.templateLib,
-                            //     includeHidden: false,
-                            //     orderBy: PropertyFieldListPickerOrderBy.Title,
-                            //     disabled: false,
-                            //     onPropertyChange: this.onPropertyPaneFieldChanged.bind(this),
-                            //     properties: this.properties,
-                            //     context: this.context,
-                            //     onGetErrorMessage: null,
-                            //     deferredValidationTime: 0,
-                            //     baseTemplate: 101,
-                            //     listsToExclude: ['Documents']
-                            // }),
-                            // PropertyPaneWebPartInformation({
-                            //     description: `${strings.PropInfoTemplateLib}`,
-                            //     key: 'templateLibInfoId'
-                            // }),
+                            PropertyFieldListPicker('tempLib', {
+                                key: 'tempLibFieldId',
+                                label: strings.PropTempLibLabel,
+                                selectedList: this.properties.tempLib,
+                                includeHidden: false,
+                                orderBy: PropertyFieldListPickerOrderBy.Title,
+                                disabled: false,
+                                onPropertyChange: this.onPropertyPaneFieldChanged.bind(this),
+                                properties: this.properties,
+                                context: this.context,
+                                onGetErrorMessage: null,
+                                deferredValidationTime: 0,
+                                baseTemplate: 101,
+                                listsToExclude: ['Documents']
+                            }),
+                            PropertyPaneWebPartInformation({
+                                description: `${strings.PropInfoTempLib}`,
+                                key: 'tempLibInfoId'
+                            }),
+                            PropertyFieldToggleWithCallout('deleteThumbnails', {
+                                calloutTrigger: CalloutTriggers.Hover,
+                                key: 'deleteThumbnailsFieldId',
+                                label: strings.PropDelThumbnail,
+                                calloutContent: React.createElement('div', {}, strings.PropDelThumbnailCallout),
+                                onText: 'ON',
+                                offText: 'OFF',
+                                checked: this.properties.deleteThumbnails
+                            }),
                             // PropertyPaneTextField('AzFuncUrl', {
                             //     label: strings.PropAzFuncLabel,
                             //     description: strings.PropAzFuncDesc,

@@ -1,5 +1,4 @@
 import { MSGraphClient } from '@microsoft/sp-http';
-import { graph } from "@pnp/graph";
 import "@pnp/graph/users";
 import "@pnp/graph/photos";
 import "@pnp/graph/groups";
@@ -13,6 +12,9 @@ import { Web, IWeb } from "@pnp/sp/webs";
 import { ISiteUserInfo } from "@pnp/sp/site-users/types";
 import { PnPClientStorage, dateAdd } from '@pnp/common';
 import { IUserInfo, IUserPickerInfo } from './IModel';
+
+import "@pnp/sp/search";
+import { SearchQueryBuilder, SearchResults, ISearchQuery } from "@pnp/sp/search";
 
 const storage = new PnPClientStorage();
 
@@ -40,6 +42,18 @@ export default class Helper implements IHelper {
     constructor(weburl?: string, graphClient?: MSGraphClient) {
         this._graphClient = graphClient ? graphClient : null;
         this._web = weburl ? Web(weburl) : sp.web;
+        this._demo();
+    }
+
+    private _demo = async () => {
+        const results2: SearchResults = await sp.search(<ISearchQuery>{
+            Querytext: "mani*",
+            RowLimit: 10,
+            EnableInterleaving: true,
+            SourceId: 'b09a7990-05ea-4af9-81ef-edfab16c4e31',
+            SelectProperties: ['PreferredName', 'AccountName', 'PictureURL', 'PictureHeight', 'PictureThumnailURL', 'PictureWidth', 'Size', 'DisplayDate']
+        });
+        console.log(results2.PrimarySearchResults);
     }
 
     public dataURItoBlob = (dataURI): Blob => {
@@ -120,8 +134,8 @@ export default class Helper implements IHelper {
                             });
                         });
                         let photoReq: any = { requests: requests };
-                        let res: any = await this._graphClient.api('$batch').post(photoReq);
-                        finalResponse.push(res);
+                        let graphRes: any = await this._graphClient.api('$batch').post(photoReq);
+                        finalResponse.push(graphRes);
                     })).then(() => {
                         res(finalResponse);
                     });
@@ -133,7 +147,7 @@ export default class Helper implements IHelper {
                             method: 'GET',
                             responseType: 'blob',
                             headers: { "Content-Type": "image/jpeg" },
-                            url: `/users/${upn}/photos/96x96/$value`
+                            url: `/users/${upn}/photo/$value`
                         });
                     });
                     let photoReq: any = { requests: requests };

@@ -32,6 +32,8 @@ export interface IPhotoSyncProps {
     allowedUsers: IPropertyFieldGroupOrPerson[];
     openPropertyPane: () => void;
     enableBulkUpdate: boolean;
+    tempLib: string;
+    deleteThumbnails: boolean;
 }
 
 const PhotoSync: React.FunctionComponent<IPhotoSyncProps> = (props) => {
@@ -47,9 +49,11 @@ const PhotoSync: React.FunctionComponent<IPhotoSyncProps> = (props) => {
         context: props.context,
         helper: props.helper,
         displayMode: props.displayMode,
-        openPropertyPane: props.openPropertyPane
+        openPropertyPane: props.openPropertyPane,
+        tempLib: props.tempLib,
+        deleteThumbnails: props.deleteThumbnails
     };
-    const showConfig = false; //!props.templateLib || !props.AzFuncUrl ? true : false;
+    const showConfig = false; //!props.templateLib || !props.AzFuncUrl || !props.tempLib ? true : false;
     const _useFullWidth = () => {
         const jQuery: any = require('jquery');
         if (props.useFullWidth) {
@@ -113,10 +117,6 @@ const PhotoSync: React.FunctionComponent<IPhotoSyncProps> = (props) => {
     useEffect(() => {
         _updatePivotMenus();
     }, [props.enableBulkUpdate]);
-
-    useEffect(() => {
-
-    }, []);
 
     return (
         <AppContext.Provider value={parentCtxValues}>

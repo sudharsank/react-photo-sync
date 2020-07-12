@@ -8,6 +8,8 @@ export interface AppContextProps {
     helper: IHelper;
     displayMode: DisplayMode;
     openPropertyPane: () => void;
+    tempLib: string;
+    deleteThumbnails: boolean;
 }
 
 export const AppContext = React.createContext<AppContextProps>(undefined);

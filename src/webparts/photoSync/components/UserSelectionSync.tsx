@@ -14,6 +14,7 @@ import styles from './PhotoSync.module.scss';
 import { divProperties } from 'office-ui-fabric-react/lib/Utilities';
 
 const filter: any = require('lodash/filter');
+const map: any = require('lodash/map');
 
 export interface IUserSelectionSyncProps {
 
@@ -28,6 +29,10 @@ const UserSelectionSync: React.FunctionComponent<IUserSelectionSyncProps> = (pro
     const [disableButton, { toggle: toggleDisableButton, setFalse: enableButton }] = useBoolean(false);
     const [disableUserPicker, { toggle: toggleDisableUserPicker }] = useBoolean(false);
     const [columns, setColumns] = useState<IColumn[]>([]);
+    const [processingPhotoUpdate, { toggle: toggleProcessingPhotoUpdate }] = useBoolean(false);
+    const [showUpdateButton, { toggle: toggleShowUpdateButton, setFalse: hideUpdateButton }] = useBoolean(false);
+    const [message, setMessage] = useState<string>('');
+    const [smgScope, setMessageScope] = useState<MessageScope>(MessageScope.Info);
 
     const _buildColumns = (colValues: string[]) => {
         let cols: IColumn[] = [];
@@ -41,7 +46,7 @@ const UserSelectionSync: React.FunctionComponent<IUserSelectionSyncProps> = (pro
                 cols.push({
                     key: 'loginname', name: 'User ID', fieldName: col, minWidth: 250, maxWidth: 350,
                     onRender: (item: any) => {
-                        return (<span>{item[col].split('|')[2]}</span>)
+                        return (<span>{item[col].split('|')[2]}</span>);
                     }
                 } as IColumn);
             }
@@ -86,10 +91,19 @@ const UserSelectionSync: React.FunctionComponent<IUserSelectionSyncProps> = (pro
                     PhotoUrl: item.imageUrl
                 });
             });
+            _buildColumns(Object.keys(userInfo[0]));
         }
-        setSelectedUsers(userInfo);
-        _buildColumns(Object.keys(userInfo[0]));
+        setSelectedUsers(userInfo);        
         enableButton();
+        hideUpdateButton();
+    };
+    /**
+     * Set the defaultusers property for people picker control, this is used when clearing the data.
+     */
+    const _getSelectedUsersLoginNames = (items: any[]): string[] => {
+        let retUsers: string[] = [];
+        retUsers = map(items, (o) => { return o.LoginName.split('|')[2]; });
+        return retUsers;
     };
     const _getPhotosFromAzure = async () => {
         toggleDisableUserPicker();
@@ -101,25 +115,41 @@ const UserSelectionSync: React.FunctionComponent<IUserSelectionSyncProps> = (pro
             res.map(response => {
                 if (response.responses && response.responses.length > 0) {
                     response.responses.map(finres => {
-                        var fil = filter(tempUsers, (o) => { return o.LoginName == finres.id });
+                        var fil = filter(tempUsers, (o) => { return o.LoginName == finres.id; });
                         if (fil && fil.length > 0) {
                             fil[0].AADPhotoUrl = finres.body.error ? '' : "data:image/jpg;base64," + finres.body;
                         }
                     });
                 }
             });
-            console.log(tempUsers);
             setSelectedUsers(tempUsers);
             _buildColumns(Object.keys(tempUsers[0]));
         }
-        //toggleDisableButton();
         toggleDisableUserPicker();
         togglePhotoLoader();
+        toggleShowUpdateButton();
+        setMessageScope(MessageScope.Info);
+        setMessage(strings.NoAADPhotos);
     };
+    const _syncPhotoToSPUPS = async () => {
+        toggleProcessingPhotoUpdate();
+        setTimeout(() => {
+            setSelectedUsers([]);
+            toggleProcessingPhotoUpdate();
+            setMessageScope(MessageScope.Success);
+            setMessage(strings.UpdateProcessInitialized);
+        }, 4000);
+    };
+    useEffect(() => {
+
+    }, []);
     return (
         <div>
+            {message && message.length > 0 &&
+                <MessageContainer MessageScope={smgScope} Message={message} />
+            }
             <PeoplePicker
-                disabled={disableUserPicker}
+                disabled={disableUserPicker || processingPhotoUpdate}
                 context={appContext.context}
                 titleText={strings.PPLPickerTitleText}
                 personSelectionLimit={10}
@@ -130,7 +160,7 @@ const UserSelectionSync: React.FunctionComponent<IUserSelectionSyncProps> = (pro
                 principalTypes={[PrincipalType.User]}
                 resolveDelay={500}
                 selectedItems={_selectedItems}
-            //defaultSelectedUsers={selectedUsers.length > 0 ? this._getSelectedUsersLoginNames(selectedUsers) : []}
+                defaultSelectedUsers={selectedUsers.length > 0 ? _getSelectedUsersLoginNames(selectedUsers) : []}
             />
             {/* {reloadGetProperties ? (
                 <>
@@ -152,7 +182,7 @@ const UserSelectionSync: React.FunctionComponent<IUserSelectionSyncProps> = (pro
             {selectedUsers && selectedUsers.length > 0 &&
                 <>
                     <div style={{ marginTop: "5px" }}>
-                        <PrimaryButton text={strings.BtnAzurePhotoProps} onClick={_getPhotosFromAzure} disabled={disableButton} />
+                        <PrimaryButton text={strings.BtnAzurePhotoProps} onClick={_getPhotosFromAzure} disabled={disableButton || processingPhotoUpdate} />
                         {showPhotoLoader && <Spinner className={styles.generateTemplateLoader} label={strings.PropsLoader} ariaLive="assertive" labelPosition="right" />}
                     </div>
                     <div style={{ marginTop: '5px' }}>
@@ -167,8 +197,15 @@ const UserSelectionSync: React.FunctionComponent<IUserSelectionSyncProps> = (pro
                             selectionMode={SelectionMode.none}
                             enableShimmer={true} />
                     </div>
+                    {showUpdateButton &&
+                        <div style={{ marginTop: "5px" }}>
+                            <PrimaryButton text={strings.BtnUpdatePhoto} onClick={_syncPhotoToSPUPS} disabled={processingPhotoUpdate} />
+                            {processingPhotoUpdate && <Spinner className={styles.generateTemplateLoader} label={strings.PropsLoader} ariaLive="assertive" labelPosition="right" />}
+                        </div>
+                    }
                 </>
             }
+
         </div>
     );
 };

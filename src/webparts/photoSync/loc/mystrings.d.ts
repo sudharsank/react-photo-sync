@@ -3,10 +3,13 @@ declare interface IPhotoSyncWebPartStrings {
     BasicGroupName: string;
     ListCreationText: string;
     PropTemplateLibLabel: string;
+    PropTempLibLabel: string;
+    PropDelThumbnail: string;
     PropAzFuncLabel: string;
     PropAzFuncDesc: string;
     PropUseCertLabel: string;
     PropUseCertCallout: string;
+    PropDelThumbnailCallout: string;
     PropDateFormatLabel: string;
     PropInfoDateFormat: string;
     PropInfoUseCert: string;
@@ -14,6 +17,7 @@ declare interface IPhotoSyncWebPartStrings {
     PropInfoNormalUser: string;
     PropAllowedUserInfo: string;
     PropEnableBUCallout: string;
+    PropInfoTempLib: string;
 
     DefaultAppTitle: string;
     PlaceholderIconText: string;
@@ -25,6 +29,7 @@ declare interface IPhotoSyncWebPartStrings {
     BtnUploadPhotoDataForSync: string;
     BtnUpdatePhotoProps: string;
     BtnAzurePhotoProps: string;
+    BtnUpdatePhoto: string;
 
     PPLPickerTitleText: string;
     Photo_UserListChanges: string;
@@ -33,6 +38,8 @@ declare interface IPhotoSyncWebPartStrings {
     PropsUpdateLoader: string;
     AdminConfigHelp: string;
     AccessDenied: string;
+    NoAADPhotos: string;
+    UpdateProcessInitialized: string;
 
     TabMenu1: string;
     TabMenu2: string;
