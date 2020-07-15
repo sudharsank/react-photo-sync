@@ -40,6 +40,7 @@ declare interface IPhotoSyncWebPartStrings {
     AccessDenied: string;
     NoAADPhotos: string;
     UpdateProcessInitialized: string;
+    EmptyPhotoMsg: string;
 
     TabMenu1: string;
     TabMenu2: string;

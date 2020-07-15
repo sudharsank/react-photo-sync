@@ -74,7 +74,7 @@ const UserSelectionSync: React.FunctionComponent<IUserSelectionSyncProps> = (pro
                             return (
                                 <div><Persona {...authorPersona} size={PersonaSize.large} /></div>
                             );
-                        } else return (<></>);
+                        } else return (<div className={styles.noPhotoMsg}>{strings.EmptyPhotoMsg}</div>);
                     }
                 } as IColumn);
             }
@@ -93,7 +93,7 @@ const UserSelectionSync: React.FunctionComponent<IUserSelectionSyncProps> = (pro
             });
             _buildColumns(Object.keys(userInfo[0]));
         }
-        setSelectedUsers(userInfo);        
+        setSelectedUsers(userInfo);
         enableButton();
         hideUpdateButton();
     };
@@ -133,12 +133,13 @@ const UserSelectionSync: React.FunctionComponent<IUserSelectionSyncProps> = (pro
     };
     const _syncPhotoToSPUPS = async () => {
         toggleProcessingPhotoUpdate();
-        setTimeout(() => {
-            setSelectedUsers([]);
-            toggleProcessingPhotoUpdate();
-            setMessageScope(MessageScope.Success);
-            setMessage(strings.UpdateProcessInitialized);
-        }, 4000);
+        let finalUsers: any[] = filter(selectedUsers, (o) => { return o.AADPhotoUrl; });
+        console.log(finalUsers);
+        await appContext.helper.getAndStoreUserThumbnailPhotos(finalUsers);
+        setSelectedUsers([]);
+        toggleProcessingPhotoUpdate();
+        setMessageScope(MessageScope.Success);
+        setMessage(strings.UpdateProcessInitialized);
     };
     useEffect(() => {
 

@@ -42,6 +42,7 @@ define([], function() {
     AccessDenied: "Access denied. Please contact your administrator.",
     NoAADPhotos: "User Photos that are not updated in Azure AD are skipped in the update process.",
     UpdateProcessInitialized: "Sync Job triggered to update the photos. Track the status on 'Sync Status' tab!",
+    EmptyPhotoMsg: "Photo not found!",
 
     TabMenu1: "User Selection Photo Sync",
     TabMenu2: "Bulk Photo Sync",

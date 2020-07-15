@@ -22,6 +22,8 @@ const map: any = require('lodash/map');
 const intersection: any = require('lodash/intersection');
 const orderBy: any = require('lodash/orderBy');
 const chunk: any = require('lodash/chunk');
+const batchItemLimit: number = 18;
+const userBatchLimit: number = 6;
 
 const userDefStorageKey: string = 'userDefaultInfo';
 const userCusStorageKey: string = 'userCustomInfo';
@@ -32,6 +34,7 @@ export interface IHelper {
     getCurrentUserCustomInfo: () => Promise<IUserInfo>;
     checkCurrentUserGroup: (allowedGroups: string[], userGroups: string[]) => boolean;
     getUserPhotoFromAADForDisplay: (users: IUserPickerInfo[]) => Promise<any[]>;
+    getAndStoreUserThumbnailPhotos: (users: IUserPickerInfo[]) => Promise<boolean>;
 }
 
 export default class Helper implements IHelper {
@@ -42,7 +45,7 @@ export default class Helper implements IHelper {
     constructor(weburl?: string, graphClient?: MSGraphClient) {
         this._graphClient = graphClient ? graphClient : null;
         this._web = weburl ? Web(weburl) : sp.web;
-        this._demo();
+        //this._demo();
     }
 
     private _demo = async () => {
@@ -114,13 +117,12 @@ export default class Helper implements IHelper {
      * Get user profile photos from Azure AD
      */
     public getUserPhotoFromAADForDisplay = async (users: IUserPickerInfo[]): Promise<any[]> => {
-        let batchItems: number = 15;
         return new Promise(async (res, rej) => {
             if (users && users.length > 0) {
                 let requests: any[] = [];
                 let finalResponse: any[] = [];
-                if (users.length > batchItems) {
-                    let chunkUserArr: any[] = chunk(users, batchItems);
+                if (users.length > batchItemLimit) {
+                    let chunkUserArr: any[] = chunk(users, batchItemLimit);
                     Promise.all(chunkUserArr.map(async chnkdata => {
                         requests = [];
                         chnkdata.map((user: IUserPickerInfo) => {
@@ -130,7 +132,7 @@ export default class Helper implements IHelper {
                                 method: 'GET',
                                 responseType: 'blob',
                                 headers: { "Content-Type": "image/jpeg" },
-                                url: `/users/${upn}/photos/96x96/$value`
+                                url: `/users/${upn}/photos/$value`
                             });
                         });
                         let photoReq: any = { requests: requests };
@@ -155,6 +157,74 @@ export default class Helper implements IHelper {
                     res(finalResponse);
                 }
             }
+        });
+    }
+    public getAndStoreUserThumbnailPhotos = async (users: IUserPickerInfo[]): Promise<boolean> => {
+        return new Promise(async (res, rej) => {
+            if (users && users.length > 0) {
+                let requests: any[] = [];
+                let finalResponse: any[] = [];
+                if (users.length > userBatchLimit) {
+                    let chunkUserArr: any[] = chunk(users, userBatchLimit);
+                    Promise.all(chunkUserArr.map(async chnkdata => {
+                        requests = [];
+                        chnkdata.map((user: IUserPickerInfo) => {
+                            let upn: string = user.LoginName.split('|')[2];
+                            requests.push({
+                                id: `${user.LoginName}_1`,
+                                method: 'GET',
+                                responseType: 'blob',
+                                headers: { "Content-Type": "image/jpeg" },
+                                url: `/users/${upn}/photos/48x48/$value`
+                            }, {
+                                id: `${user.LoginName}_2`,
+                                method: 'GET',
+                                responseType: 'blob',
+                                headers: { "Content-Type": "image/jpeg" },
+                                url: `/users/${upn}/photos/96x96/$value`
+                            }, {
+                                id: `${user.LoginName}_3`,
+                                method: 'GET',
+                                responseType: 'blob',
+                                headers: { "Content-Type": "image/jpeg" },
+                                url: `/users/${upn}/photos/240x240/$value`
+                            });
+                        });
+                        let photoReq: any = { requests: requests };
+                        let graphRes: any = await this._graphClient.api('$batch').post(photoReq);
+                        finalResponse.push(graphRes);
+                    })).then(() => {
+                        console.log(finalResponse);
+                    });
+                } else {
+                    users.map((user: IUserPickerInfo) => {
+                        let upn: string = user.LoginName.split('|')[2];
+                        requests.push({
+                            id: `${user.LoginName}_1`,
+                            method: 'GET',
+                            responseType: 'blob',
+                            headers: { "Content-Type": "image/jpeg" },
+                            url: `/users/${upn}/photos/48x48/$value`
+                        }, {
+                            id: `${user.LoginName}_2`,
+                            method: 'GET',
+                            responseType: 'blob',
+                            headers: { "Content-Type": "image/jpeg" },
+                            url: `/users/${upn}/photos/96x96/$value`
+                        }, {
+                            id: `${user.LoginName}_3`,
+                            method: 'GET',
+                            responseType: 'blob',
+                            headers: { "Content-Type": "image/jpeg" },
+                            url: `/users/${upn}/photos/240x240/$value`
+                        });
+                    });
+                    let photoReq: any = { requests: requests };
+                    finalResponse.push(await this._graphClient.api('$batch').post(photoReq));
+                    console.log(finalResponse);
+                }
+            }
+            res(true);
         });
     }
 
