@@ -33,7 +33,9 @@ const UserSelectionSync: React.FunctionComponent<IUserSelectionSyncProps> = (pro
     const [showUpdateButton, { toggle: toggleShowUpdateButton, setFalse: hideUpdateButton }] = useBoolean(false);
     const [message, setMessage] = useState<string>('');
     const [smgScope, setMessageScope] = useState<MessageScope>(MessageScope.Info);
-
+    /**
+     * Build columns for Datalist.     
+     */
     const _buildColumns = (colValues: string[]) => {
         let cols: IColumn[] = [];
         colValues.map(col => {
@@ -81,6 +83,9 @@ const UserSelectionSync: React.FunctionComponent<IUserSelectionSyncProps> = (pro
         });
         setColumns(cols);
     };
+    /**
+     * People Picker change event     
+     */
     const _selectedItems = (items: any[]) => {
         let userInfo: IUserPickerInfo[] = [];
         if (items && items.length > 0) {
@@ -105,6 +110,9 @@ const UserSelectionSync: React.FunctionComponent<IUserSelectionSyncProps> = (pro
         retUsers = map(items, (o) => { return o.LoginName.split('|')[2]; });
         return retUsers;
     };
+    /**
+     * To display the photos from Azure AD
+     */
     const _getPhotosFromAzure = async () => {
         toggleDisableUserPicker();
         toggleDisableButton();
@@ -131,11 +139,16 @@ const UserSelectionSync: React.FunctionComponent<IUserSelectionSyncProps> = (pro
         setMessageScope(MessageScope.Info);
         setMessage(strings.NoAADPhotos);
     };
+    /**
+     * To download the photo thumbnails from Azure to document library.
+     * To send the updated final json to the Azure function to trigger the job
+     * for photo sync
+     */
     const _syncPhotoToSPUPS = async () => {
         toggleProcessingPhotoUpdate();
         let finalUsers: any[] = filter(selectedUsers, (o) => { return o.AADPhotoUrl; });
         console.log(finalUsers);
-        await appContext.helper.getAndStoreUserThumbnailPhotos(finalUsers);
+        await appContext.helper.getAndStoreUserThumbnailPhotos(finalUsers, appContext.tempLib);
         setSelectedUsers([]);
         toggleProcessingPhotoUpdate();
         setMessageScope(MessageScope.Success);

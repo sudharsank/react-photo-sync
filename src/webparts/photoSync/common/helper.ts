@@ -5,6 +5,8 @@ import "@pnp/graph/groups";
 import { sp } from '@pnp/sp';
 import "@pnp/sp/profiles";
 import "@pnp/sp/webs";
+import "@pnp/sp/lists";
+import "@pnp/sp/items";
 import "@pnp/sp/site-users";
 import "@pnp/sp/files";
 import "@pnp/sp/folders";
@@ -34,18 +36,20 @@ export interface IHelper {
     getCurrentUserCustomInfo: () => Promise<IUserInfo>;
     checkCurrentUserGroup: (allowedGroups: string[], userGroups: string[]) => boolean;
     getUserPhotoFromAADForDisplay: (users: IUserPickerInfo[]) => Promise<any[]>;
-    getAndStoreUserThumbnailPhotos: (users: IUserPickerInfo[]) => Promise<boolean>;
+    getAndStoreUserThumbnailPhotos: (users: IUserPickerInfo[], tempLibId: string) => Promise<boolean>;
 }
 
 export default class Helper implements IHelper {
     private _web: IWeb = null;
     private _graphClient: MSGraphClient = null;
     private _graphUrl: string = "https://graph.microsoft.com/v1.0";
+    private web_ServerRelativeURL: string = '';
+    private TPhotoFolderName: string = 'UserPhotos';
 
-    constructor(weburl?: string, graphClient?: MSGraphClient) {
+    constructor(webRelativeUrl: string, weburl?: string, graphClient?: MSGraphClient) {
         this._graphClient = graphClient ? graphClient : null;
         this._web = weburl ? Web(weburl) : sp.web;
-        //this._demo();
+        this.web_ServerRelativeURL = webRelativeUrl;
     }
 
     private _demo = async () => {
@@ -159,8 +163,13 @@ export default class Helper implements IHelper {
             }
         });
     }
-    public getAndStoreUserThumbnailPhotos = async (users: IUserPickerInfo[]): Promise<boolean> => {
+    /**
+     * Get thumbnail photos for the users.
+     * @param users List of users
+     */
+    public getAndStoreUserThumbnailPhotos = async (users: IUserPickerInfo[], tempLibId: string): Promise<boolean> => {
         return new Promise(async (res, rej) => {
+            let tempLibName: any = await this._web.lists.getById(tempLibId).select('Title').get();
             if (users && users.length > 0) {
                 let requests: any[] = [];
                 let finalResponse: any[] = [];
@@ -195,6 +204,7 @@ export default class Helper implements IHelper {
                         finalResponse.push(graphRes);
                     })).then(() => {
                         console.log(finalResponse);
+                        this.saveThumbnailPhotosInDocLib(finalResponse, tempLibName.Title);
                     });
                 } else {
                     users.map((user: IUserPickerInfo) => {
@@ -222,10 +232,37 @@ export default class Helper implements IHelper {
                     let photoReq: any = { requests: requests };
                     finalResponse.push(await this._graphClient.api('$batch').post(photoReq));
                     console.log(finalResponse);
+                    this.saveThumbnailPhotosInDocLib(finalResponse, tempLibName.Title);
                 }
             }
             res(true);
         });
+    }
+    /**
+     * Add thumbnails to the configured document library
+     */
+    private saveThumbnailPhotosInDocLib = async (thumbnails: any[], tempLibName: string): Promise<boolean> => {
+        if (thumbnails && thumbnails.length > 0) {
+            thumbnails.map(res => {
+                if (res.responses && res.responses.length > 0) {
+                    res.responses.map(thumbnail => {
+                        if (!thumbnail.body.error) {
+                            let username: string = thumbnail.id.split('_')[0].split('|')[2];
+                            let userFilename: string = username.replace(/[@.]/g, '_');
+                            let filecontent = this.dataURItoBlob("data:image/jpg;base64," + thumbnail.body);
+                            let partFileName = '';
+                            if (thumbnail.id.indexOf('_1') > 0) partFileName = 'SThumb.jpg';
+                            else if (thumbnail.id.indexOf('_2') > 0) partFileName = "MThumb.jpg";
+                            else if (thumbnail.id.indexOf('_3') > 0) partFileName = "LThumb.jpg";
+                            sp.web.getFolderByServerRelativeUrl(decodeURI(`${this.web_ServerRelativeURL}/${tempLibName}/${this.TPhotoFolderName}/`))
+                                .files
+                                .add(decodeURI(`${this.web_ServerRelativeURL}/${tempLibName}/${this.TPhotoFolderName}/${userFilename}_` + partFileName), filecontent, true);
+                        }
+                    });
+                }
+            });
+        }
+        return true;
     }
 
     // public async componentDidMount() {

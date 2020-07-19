@@ -40,7 +40,7 @@ export default class PhotoSyncWebPart extends BaseClientSideWebPart<IPhotoSyncWe
         await super.onInit();
         sp.setup(this.context);
         this.client = await this.context.msGraphClientFactory.getClient();
-        this.helper = new Helper('', this.client);
+        this.helper = new Helper(this.context.pageContext.web.serverRelativeUrl, '', this.client);
     }
 
     public async render(): Promise<void> {
