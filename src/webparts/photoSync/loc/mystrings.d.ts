@@ -41,6 +41,8 @@ declare interface IPhotoSyncWebPartStrings {
     NoAADPhotos: string;
     UpdateProcessInitialized: string;
     EmptyPhotoMsg: string;
+    BulkSyncNote: string;
+    BulkPhotoDragDrop: string;
 
     TabMenu1: string;
     TabMenu2: string;

@@ -9,6 +9,7 @@ import { Pivot, PivotItem } from 'office-ui-fabric-react/lib/Pivot';
 import { AppContext, AppContextProps } from '../common/AppContext';
 import Helper, { IHelper } from '../common/helper';
 import ConfigPlaceholder from '../common/ConfigPlaceholder';
+import BulkPhotoSync from './BulkPhotoSync';
 import { IPropertyFieldGroupOrPerson } from '@pnp/spfx-property-controls/lib/propertyFields/peoplePicker';
 import MessageContainer from '../common/MessageContainer';
 import { MessageScope, IUserInfo } from '../common/IModel';
@@ -53,7 +54,7 @@ const PhotoSync: React.FunctionComponent<IPhotoSyncProps> = (props) => {
         tempLib: props.tempLib,
         deleteThumbnails: props.deleteThumbnails
     };
-    const showConfig = false; //!props.templateLib || !props.AzFuncUrl || !props.tempLib ? true : false;
+    const showConfig = !props.tempLib; //!props.templateLib || !props.AzFuncUrl || !props.tempLib ? true : false;
     const _useFullWidth = () => {
         const jQuery: any = require('jquery');
         if (props.useFullWidth) {
@@ -90,7 +91,6 @@ const PhotoSync: React.FunctionComponent<IPhotoSyncProps> = (props) => {
         if (props.enableBulkUpdate) {
             pvitems = [
                 <PivotItem headerText={strings.TabMenu2} itemKey="1" itemIcon="BulkUpload" headerButtonProps={headerButtonProps}></PivotItem>,
-                <PivotItem headerText={strings.TabMenu3} itemKey="2" itemIcon="StackIndicator" headerButtonProps={headerButtonProps}></PivotItem>
             ];
         }
         setPivotItems(pvitems);
@@ -145,7 +145,7 @@ const PhotoSync: React.FunctionComponent<IPhotoSyncProps> = (props) => {
                                                                                 <Pivot defaultSelectedKey="0" selectedKey={selectedMenu} onLinkClick={_onMenuClick} className={styles.periodmenu}>
                                                                                     <PivotItem headerText={strings.TabMenu1} itemKey="0" itemIcon="SchoolDataSyncLogo" headerButtonProps={headerButtonProps}></PivotItem>
                                                                                     {pivotItems}
-                                                                                    <PivotItem headerText={strings.TabMenu5} itemKey="3" itemIcon="SyncStatus" headerButtonProps={headerButtonProps}></PivotItem>
+                                                                                    <PivotItem headerText={strings.TabMenu3} itemKey="3" itemIcon="SyncStatus" headerButtonProps={headerButtonProps}></PivotItem>
                                                                                 </Pivot>
                                                                             </div>
                                                                             {/* Individual Selection photo sync */}
@@ -154,16 +154,12 @@ const PhotoSync: React.FunctionComponent<IPhotoSyncProps> = (props) => {
                                                                                     <UserSelectionSync />
                                                                                 </div>
                                                                             }
-                                                                            {/* Bulk files to be uploaded for photo sync */}
+                                                                            {/* Bulk photo sync */}
                                                                             {selectedMenu == "1" &&
-                                                                                <></>
-                                                                            }
-                                                                            {/* Uploaded files list */}
-                                                                            {selectedMenu == "2" &&
-                                                                                <></>
+                                                                                <BulkPhotoSync />
                                                                             }
                                                                             {/* Overall status of the sync jobs */}
-                                                                            {selectedMenu == "3" &&
+                                                                            {selectedMenu == "2" &&
                                                                                 <></>
                                                                             }
                                                                         </>
