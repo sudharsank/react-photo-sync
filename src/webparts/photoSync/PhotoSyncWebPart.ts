@@ -28,7 +28,10 @@ export interface IPhotoSyncWebPartProps {
     allowedUsers: IPropertyFieldGroupOrPerson[];
     enableBulkUpdate: boolean;
     tempLib: string;
+    UseCert: boolean;
+    dateFormat: string;
     deleteThumbnails: boolean;
+    AzFuncUrl: string;
 }
 
 export default class PhotoSyncWebPart extends BaseClientSideWebPart<IPhotoSyncWebPartProps> {
@@ -48,6 +51,9 @@ export default class PhotoSyncWebPart extends BaseClientSideWebPart<IPhotoSyncWe
             PhotoSync,
             {
                 context: this.context,
+                httpClient: this.context.httpClient,
+                siteUrl: this.context.pageContext.legacyPageContext.webAbsoluteUrl,
+                domainName: this.context.pageContext.legacyPageContext.webDomain,
                 displayMode: this.displayMode,
                 helper: this.helper,
                 useFullWidth: this.properties.useFullWidth,
@@ -59,7 +65,10 @@ export default class PhotoSyncWebPart extends BaseClientSideWebPart<IPhotoSyncWe
                 allowedUsers: this.properties.allowedUsers,
                 enableBulkUpdate: this.properties.enableBulkUpdate,
                 tempLib: this.properties.tempLib,
-                deleteThumbnails: this.properties.deleteThumbnails
+                deleteThumbnails: this.properties.deleteThumbnails,
+                UseCert: this.properties.UseCert,
+                dateFormat: this.properties.dateFormat,
+                AzFuncUrl: this.properties.AzFuncUrl
             }
         );
 
@@ -141,40 +150,40 @@ export default class PhotoSyncWebPart extends BaseClientSideWebPart<IPhotoSyncWe
                                 offText: 'OFF',
                                 checked: this.properties.deleteThumbnails
                             }),
-                            // PropertyPaneTextField('AzFuncUrl', {
-                            //     label: strings.PropAzFuncLabel,
-                            //     description: strings.PropAzFuncDesc,
-                            //     multiline: true,
-                            //     placeholder: strings.PropAzFuncLabel,
-                            //     resizable: true,
-                            //     rows: 5,
-                            //     value: this.properties.AzFuncUrl
-                            // }),
-                            // PropertyFieldToggleWithCallout('UseCert', {
-                            //     calloutTrigger: CalloutTriggers.Hover,
-                            //     key: 'UseCertFieldId',
-                            //     label: strings.PropUseCertLabel,
-                            //     calloutContent: React.createElement('div', {}, strings.PropUseCertCallout),
-                            //     onText: 'ON',
-                            //     offText: 'OFF',
-                            //     checked: this.properties.UseCert
-                            // }),
-                            // PropertyPaneWebPartInformation({
-                            //     description: `${strings.PropInfoUseCert}`,
-                            //     key: 'useCertInfoId'
-                            // }),
-                            // PropertyPaneTextField('dateFormat', {
-                            //     label: strings.PropDateFormatLabel,
-                            //     description: '',
-                            //     multiline: false,
-                            //     placeholder: strings.PropDateFormatLabel,
-                            //     resizable: false,
-                            //     value: this.properties.dateFormat
-                            // }),
-                            // PropertyPaneWebPartInformation({
-                            //     description: `${strings.PropInfoDateFormat}`,
-                            //     key: 'dateFormatInfoId'
-                            // }),
+                            PropertyPaneTextField('AzFuncUrl', {
+                                label: strings.PropAzFuncLabel,
+                                description: strings.PropAzFuncDesc,
+                                multiline: true,
+                                placeholder: strings.PropAzFuncLabel,
+                                resizable: true,
+                                rows: 5,
+                                value: this.properties.AzFuncUrl
+                            }),
+                            PropertyFieldToggleWithCallout('UseCert', {
+                                calloutTrigger: CalloutTriggers.Hover,
+                                key: 'UseCertFieldId',
+                                label: strings.PropUseCertLabel,
+                                calloutContent: React.createElement('div', {}, strings.PropUseCertCallout),
+                                onText: 'ON',
+                                offText: 'OFF',
+                                checked: this.properties.UseCert
+                            }),
+                            PropertyPaneWebPartInformation({
+                                description: `${strings.PropInfoUseCert}`,
+                                key: 'useCertInfoId'
+                            }),
+                            PropertyPaneTextField('dateFormat', {
+                                label: strings.PropDateFormatLabel,
+                                description: '',
+                                multiline: false,
+                                placeholder: strings.PropDateFormatLabel,
+                                resizable: false,
+                                value: this.properties.dateFormat
+                            }),
+                            PropertyPaneWebPartInformation({
+                                description: `${strings.PropInfoDateFormat}`,
+                                key: 'dateFormatInfoId'
+                            }),
                             PropertyFieldPeoplePicker('allowedUsers', {
                                 label: 'SharePoint Groups',
                                 initialData: this.properties.allowedUsers,

@@ -12,24 +12,27 @@ import ConfigPlaceholder from '../common/ConfigPlaceholder';
 import BulkPhotoSync from './BulkPhotoSync';
 import { IPropertyFieldGroupOrPerson } from '@pnp/spfx-property-controls/lib/propertyFields/peoplePicker';
 import MessageContainer from '../common/MessageContainer';
-import { MessageScope, IUserInfo } from '../common/IModel';
+import { MessageScope, IUserInfo, IAzFuncValues } from '../common/IModel';
 import { WebPartContext } from '@microsoft/sp-webpart-base';
 import UserSelectionSync from './UserSelectionSync';
+import { HttpClient } from '@microsoft/sp-http';
 import { PeoplePicker, PrincipalType } from '@pnp/spfx-controls-react/lib/controls/peoplepicker';
 
 const map: any = require('lodash/map');
 
 export interface IPhotoSyncProps {
     context: WebPartContext;
+    httpClient: HttpClient;
+    siteUrl: string;
+    domainName: string;
     helper: IHelper;
     displayMode: DisplayMode;
     useFullWidth: boolean;
     appTitle: string;
     updateProperty: (value: string) => void;
-    //templateLib: string;
-    // AzFuncUrl: string;
-    // UseCert: boolean;
-    // dateFormat: string;
+    AzFuncUrl: string;
+    UseCert: boolean;
+    dateFormat: string;
     allowedUsers: IPropertyFieldGroupOrPerson[];
     openPropertyPane: () => void;
     enableBulkUpdate: boolean;
@@ -48,6 +51,8 @@ const PhotoSync: React.FunctionComponent<IPhotoSyncProps> = (props) => {
 
     const parentCtxValues: AppContextProps = {
         context: props.context,
+        siteurl: props.siteUrl,
+        domainName: props.domainName,
         helper: props.helper,
         displayMode: props.displayMode,
         openPropertyPane: props.openPropertyPane,
@@ -105,6 +110,29 @@ const PhotoSync: React.FunctionComponent<IPhotoSyncProps> = (props) => {
             setSelectedMenu(item.props.itemKey);
         }
     };
+    const _prepareJSONForAzFunc = (data: IAzFuncValues[], itemid: number, folderPath: string): string => {
+        let finalJson: string = "";
+        let tenantName: string = props.siteUrl.split("." + props.domainName)[0];
+        if (data && data.length > 0) {
+            let userPhotoObj = new Object();
+            userPhotoObj['adminurl'] = `${tenantName}-admin.${props.domainName}`;
+            userPhotoObj['mysiteurl'] = `${tenantName}-my.${props.domainName}`;
+            userPhotoObj['targetSiteUrl'] = props.siteUrl;
+            userPhotoObj['picfolder'] = folderPath + "/";
+            userPhotoObj['usecert'] = props.UseCert ? props.UseCert : false;
+            userPhotoObj['itemId'] = itemid;
+            userPhotoObj['value'] = data;
+            finalJson = JSON.stringify(userPhotoObj);
+        }
+        return finalJson;
+    };
+    const _updateSPWithPhoto = async (data: IAzFuncValues[], itemid: number): Promise<boolean> => {
+        let tempFolderPath: string = await props.helper.getLibraryDetails(props.tempLib);
+        let finalJson: string = _prepareJSONForAzFunc(data, itemid, tempFolderPath);
+        await props.helper.updateSyncItem(itemid, finalJson);
+        props.helper.runAzFunction(props.httpClient, finalJson, props.AzFuncUrl, itemid);
+        return true;
+    };
 
     useEffect(() => {
         _useFullWidth();
@@ -151,7 +179,7 @@ const PhotoSync: React.FunctionComponent<IPhotoSyncProps> = (props) => {
                                                                             {/* Individual Selection photo sync */}
                                                                             {selectedMenu == "0" &&
                                                                                 <div>
-                                                                                    <UserSelectionSync />
+                                                                                    <UserSelectionSync updateSPWithPhoto={_updateSPWithPhoto} />
                                                                                 </div>
                                                                             }
                                                                             {/* Bulk photo sync */}

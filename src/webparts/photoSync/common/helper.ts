@@ -1,3 +1,4 @@
+import { HttpClient, IHttpClientOptions, HttpClientResponse } from '@microsoft/sp-http';
 import { MSGraphClient } from '@microsoft/sp-http';
 import "@pnp/graph/users";
 import "@pnp/graph/photos";
@@ -13,7 +14,8 @@ import "@pnp/sp/folders";
 import { Web, IWeb } from "@pnp/sp/webs";
 import { ISiteUserInfo } from "@pnp/sp/site-users/types";
 import { PnPClientStorage, dateAdd } from '@pnp/common';
-import { IUserInfo, IUserPickerInfo } from './IModel';
+import { IUserInfo, IUserPickerInfo, SyncType, JobStatus, IAzFuncValues } from './IModel';
+import * as moment from 'moment';
 
 import "@pnp/sp/search";
 import { SearchQueryBuilder, SearchResults, ISearchQuery } from "@pnp/sp/search";
@@ -31,12 +33,16 @@ const userDefStorageKey: string = 'userDefaultInfo';
 const userCusStorageKey: string = 'userCustomInfo';
 
 export interface IHelper {
+    getLibraryDetails: (listid: string) => Promise<any>;
     dataURItoBlob: (dataURI: any) => Blob;
     getCurrentUserDefaultInfo: () => Promise<ISiteUserInfo>;
     getCurrentUserCustomInfo: () => Promise<IUserInfo>;
     checkCurrentUserGroup: (allowedGroups: string[], userGroups: string[]) => boolean;
     getUserPhotoFromAADForDisplay: (users: IUserPickerInfo[]) => Promise<any[]>;
-    getAndStoreUserThumbnailPhotos: (users: IUserPickerInfo[], tempLibId: string) => Promise<boolean>;
+    getAndStoreUserThumbnailPhotos: (users: IUserPickerInfo[], tempLibId: string) => Promise<IAzFuncValues[]>;
+    createSyncItem: (syncType: SyncType) => Promise<number>;
+    updateSyncItem: (itemid: number, inputJson: string) => void;
+    runAzFunction: (httpClient: HttpClient, inputData: any, azFuncUrl: string, itemid: number) => void;
 }
 
 export default class Helper implements IHelper {
@@ -45,6 +51,7 @@ export default class Helper implements IHelper {
     private _graphUrl: string = "https://graph.microsoft.com/v1.0";
     private web_ServerRelativeURL: string = '';
     private TPhotoFolderName: string = 'UserPhotos';
+    private Lst_SyncJobs = 'UPS Photo Sync Jobs';
 
     constructor(webRelativeUrl: string, weburl?: string, graphClient?: MSGraphClient) {
         this._graphClient = graphClient ? graphClient : null;
@@ -61,6 +68,17 @@ export default class Helper implements IHelper {
             SelectProperties: ['PreferredName', 'AccountName', 'PictureURL', 'PictureHeight', 'PictureThumnailURL', 'PictureWidth', 'Size', 'DisplayDate']
         });
         console.log(results2.PrimarySearchResults);
+    }
+
+    /**
+     * Get temp library details
+     * @param listid Temporary library
+     */
+    public getLibraryDetails = async (listid: string): Promise<string> => {
+        let retFolderPath: string = '';
+        let listDetails = await this._web.lists.getById(listid).get();
+        retFolderPath = listDetails.DocumentTemplateUrl.replace('/Forms/template.dotx', '') + '/' + this.TPhotoFolderName;
+        return retFolderPath;
     }
 
     public dataURItoBlob = (dataURI): Blob => {
@@ -167,9 +185,10 @@ export default class Helper implements IHelper {
      * Get thumbnail photos for the users.
      * @param users List of users
      */
-    public getAndStoreUserThumbnailPhotos = async (users: IUserPickerInfo[], tempLibId: string): Promise<boolean> => {
+    public getAndStoreUserThumbnailPhotos = async (users: IUserPickerInfo[], tempLibId: string): Promise<IAzFuncValues[]> => {
+        let retVals: IAzFuncValues[] = [];
         return new Promise(async (res, rej) => {
-            let tempLibName: any = await this._web.lists.getById(tempLibId).select('Title').get();
+            let tempLibUrl: string = await this.getLibraryDetails(tempLibId);
             if (users && users.length > 0) {
                 let requests: any[] = [];
                 let finalResponse: any[] = [];
@@ -202,9 +221,8 @@ export default class Helper implements IHelper {
                         let photoReq: any = { requests: requests };
                         let graphRes: any = await this._graphClient.api('$batch').post(photoReq);
                         finalResponse.push(graphRes);
-                    })).then(() => {
-                        console.log(finalResponse);
-                        this.saveThumbnailPhotosInDocLib(finalResponse, tempLibName.Title);
+                    })).then(async () => {
+                        retVals = await this.saveThumbnailPhotosInDocLib(finalResponse, tempLibUrl);
                     });
                 } else {
                     users.map((user: IUserPickerInfo) => {
@@ -231,38 +249,89 @@ export default class Helper implements IHelper {
                     });
                     let photoReq: any = { requests: requests };
                     finalResponse.push(await this._graphClient.api('$batch').post(photoReq));
-                    console.log(finalResponse);
-                    this.saveThumbnailPhotosInDocLib(finalResponse, tempLibName.Title);
+                    retVals = await this.saveThumbnailPhotosInDocLib(finalResponse, tempLibUrl);
                 }
             }
-            res(true);
+            res(retVals);
         });
     }
     /**
      * Add thumbnails to the configured document library
      */
-    private saveThumbnailPhotosInDocLib = async (thumbnails: any[], tempLibName: string): Promise<boolean> => {
+    private saveThumbnailPhotosInDocLib = async (thumbnails: any[], tempLibName: string): Promise<IAzFuncValues[]> => {
+        let retVals: IAzFuncValues[] = [];
         if (thumbnails && thumbnails.length > 0) {
             thumbnails.map(res => {
                 if (res.responses && res.responses.length > 0) {
-                    res.responses.map(thumbnail => {
+                    res.responses.map(async thumbnail => {
                         if (!thumbnail.body.error) {
                             let username: string = thumbnail.id.split('_')[0].split('|')[2];
                             let userFilename: string = username.replace(/[@.]/g, '_');
                             let filecontent = this.dataURItoBlob("data:image/jpg;base64," + thumbnail.body);
                             let partFileName = '';
+                            retVals.push({
+                                userid: username,
+                                picturename: userFilename
+                            });
                             if (thumbnail.id.indexOf('_1') > 0) partFileName = 'SThumb.jpg';
                             else if (thumbnail.id.indexOf('_2') > 0) partFileName = "MThumb.jpg";
                             else if (thumbnail.id.indexOf('_3') > 0) partFileName = "LThumb.jpg";
-                            sp.web.getFolderByServerRelativeUrl(decodeURI(`${this.web_ServerRelativeURL}/${tempLibName}/${this.TPhotoFolderName}/`))
+                            await sp.web.getFolderByServerRelativeUrl(decodeURI(`${tempLibName}/`))
                                 .files
-                                .add(decodeURI(`${this.web_ServerRelativeURL}/${tempLibName}/${this.TPhotoFolderName}/${userFilename}_` + partFileName), filecontent, true);
+                                .add(decodeURI(`${tempLibName}/${userFilename}_` + partFileName), filecontent, true);
                         }
                     });
                 }
             });
         }
-        return true;
+        return retVals;
+    }
+    /**
+     * Create a sync item
+     */
+    public createSyncItem = async (syncType: SyncType): Promise<number> => {
+        let returnVal: number = 0;
+        let itemAdded = await this._web.lists.getByTitle(this.Lst_SyncJobs).items.add({
+            Title: `SyncJob_${moment().format("MMDDYYYYhhmm")}`,
+            Status: JobStatus.Submitted.toString(),
+            SyncType: syncType.toString()
+        });
+        returnVal = itemAdded.data.Id;
+        return returnVal;
+    }
+    /**
+     * Update Sync item with the input data to sync
+     */
+    public updateSyncItem = async (itemid: number, inputJson: string) => {
+        await this._web.lists.getByTitle(this.Lst_SyncJobs).items.getById(itemid).update({
+            SyncData: inputJson
+        });
+    }
+    /**
+     * Update Sync item with the error status
+     */
+    public updateSyncItemStatus = async (itemid: number, errMsg: string) => {
+        await this._web.lists.getByTitle(this.Lst_SyncJobs).items.getById(itemid).update({
+            Status: JobStatus.Error,
+            ErrorMessage: errMsg
+        });
+    }
+    /**
+     * Azure function to update the UPS Photo properties.
+     */
+    public runAzFunction = async (httpClient: HttpClient, inputData: any, azFuncUrl: string, itemid: number) => {
+        const requestHeaders: Headers = new Headers();
+        requestHeaders.append("Content-type", "application/json");
+        requestHeaders.append("Cache-Control", "no-cache");
+        const postOptions: IHttpClientOptions = {
+            headers: requestHeaders,
+            body: `${inputData}`
+        };
+        let response: HttpClientResponse = await httpClient.post(azFuncUrl, HttpClient.configurations.v1, postOptions);
+        if (!response.ok) {
+            await this.updateSyncItemStatus(itemid, `${response.status} - ${response.statusText}`);
+        }
+        console.log("Azure Function executed");
     }
 
     // public async componentDidMount() {

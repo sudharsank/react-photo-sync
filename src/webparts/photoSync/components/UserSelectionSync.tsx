@@ -5,7 +5,7 @@ import * as strings from 'PhotoSyncWebPartStrings';
 import { AppContext, AppContextProps } from '../common/AppContext';
 import { PeoplePicker, PrincipalType } from "@pnp/spfx-controls-react/lib/PeoplePicker";
 import MessageContainer from '../common/MessageContainer';
-import { MessageScope, IUserPickerInfo } from '../common/IModel';
+import { MessageScope, IUserPickerInfo, IAzFuncValues, SyncType } from '../common/IModel';
 import { PrimaryButton } from 'office-ui-fabric-react/lib/components/Button';
 import { Spinner } from 'office-ui-fabric-react/lib/Spinner';
 import { DetailsList, IColumn, DetailsListLayoutMode, ConstrainMode, SelectionMode } from 'office-ui-fabric-react/lib/DetailsList';
@@ -15,9 +15,10 @@ import { divProperties } from 'office-ui-fabric-react/lib/Utilities';
 
 const filter: any = require('lodash/filter');
 const map: any = require('lodash/map');
+const uniqBy: any = require('lodash/uniqBy');
 
 export interface IUserSelectionSyncProps {
-
+    updateSPWithPhoto: (data: IAzFuncValues[], itemid: number) => Promise<boolean>;
 }
 
 const UserSelectionSync: React.FunctionComponent<IUserSelectionSyncProps> = (props) => {
@@ -147,13 +148,18 @@ const UserSelectionSync: React.FunctionComponent<IUserSelectionSyncProps> = (pro
     const _syncPhotoToSPUPS = async () => {
         toggleProcessingPhotoUpdate();
         let finalUsers: any[] = filter(selectedUsers, (o) => { return o.AADPhotoUrl; });
-        console.log(finalUsers);
-        await appContext.helper.getAndStoreUserThumbnailPhotos(finalUsers, appContext.tempLib);
+        //console.log(finalUsers);
+        let userVals: IAzFuncValues[] = await appContext.helper.getAndStoreUserThumbnailPhotos(finalUsers, appContext.tempLib);
+        //console.log("Users: ", uniqBy(userVals, 'userid'));
+        let itemID = await appContext.helper.createSyncItem(SyncType.Manual);
+        //console.log("Item ID: ", itemID);
+        await props.updateSPWithPhoto(uniqBy(userVals, 'userid'), itemID);
         setSelectedUsers([]);
         toggleProcessingPhotoUpdate();
         setMessageScope(MessageScope.Success);
         setMessage(strings.UpdateProcessInitialized);
     };
+
     useEffect(() => {
 
     }, []);

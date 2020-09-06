@@ -5,6 +5,8 @@ import { WebPartContext } from '@microsoft/sp-webpart-base';
 
 export interface AppContextProps {
     context: WebPartContext;
+    siteurl: string;
+    domainName: string;
     helper: IHelper;
     displayMode: DisplayMode;
     openPropertyPane: () => void;

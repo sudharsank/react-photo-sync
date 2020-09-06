@@ -21,3 +21,18 @@ export interface IUserPickerInfo {
     PhotoUrl: string;
     AADPhotoUrl?: string;
 }
+export interface IAzFuncValues {
+    userid: string;
+    picturename: string;
+}
+export enum SyncType {
+	Manual = "Manual",
+	Bulk = "Bulk",
+}
+export enum JobStatus {
+	Submitted = "Submitted",
+	InProgress = "In-Progress",
+	Completed = "Completed",
+	CompletedWithError = "Completed With Error",
+	Error = "Error"
+}
