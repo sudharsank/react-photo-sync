@@ -12,7 +12,7 @@ import "@pnp/sp/site-users";
 import "@pnp/sp/files";
 import "@pnp/sp/folders";
 import { Web, IWeb } from "@pnp/sp/webs";
-import { ISiteUserInfo } from "@pnp/sp/site-users/types";
+import { ISiteUserInfo, ISiteUser } from "@pnp/sp/site-users/types";
 import { PnPClientStorage, dateAdd } from '@pnp/common';
 import { IUserInfo, IUserPickerInfo, SyncType, JobStatus, IAzFuncValues } from './IModel';
 import * as moment from 'moment';
@@ -38,10 +38,12 @@ export interface IHelper {
     getCurrentUserDefaultInfo: () => Promise<ISiteUserInfo>;
     getCurrentUserCustomInfo: () => Promise<IUserInfo>;
     checkCurrentUserGroup: (allowedGroups: string[], userGroups: string[]) => boolean;
+    getUsersInfo: (UserIds: string[]) => Promise<any[]>;
     getUserPhotoFromAADForDisplay: (users: IUserPickerInfo[]) => Promise<any[]>;
     getAndStoreUserThumbnailPhotos: (users: IUserPickerInfo[], tempLibId: string) => Promise<IAzFuncValues[]>;
     createSyncItem: (syncType: SyncType) => Promise<number>;
     updateSyncItem: (itemid: number, inputJson: string) => void;
+    getAllJobs: () => Promise<any[]>;
     runAzFunction: (httpClient: HttpClient, inputData: any, azFuncUrl: string, itemid: number) => void;
 }
 
@@ -182,6 +184,42 @@ export default class Helper implements IHelper {
         });
     }
     /**
+     * Get user info based on UserID
+     */
+    public getUsersInfo = async (userids: string[]): Promise<any[]> => {
+        return new Promise(async (res, rej) => {
+            let finalResponse: any[] = [];
+            if (userids.length > batchItemLimit) {
+
+            } else {
+                let batch = sp.createBatch();
+                userids.map((userid: string) => {
+                    sp.web.siteUsers.getByLoginName(`i:0#.f|membership|${userid}`).inBatch(batch).get().then((userinfo) => {
+                        console.log(userinfo);
+                        if (userinfo && userinfo.Title) {
+                            finalResponse.push({
+                                'loginname': userid,
+                                'title': userinfo.Title,
+                                'status': 'Success'
+                            });
+                        }
+                    }).catch((e) => {
+                        finalResponse.push({
+                            'loginname': userid,
+                            'title': 'User not found!',
+                            'status': 'Failed'
+                        });
+                    });
+                });
+                batch.execute().then(() => {
+                    res(finalResponse);
+                }).catch(() => {
+                    res(finalResponse);
+                });
+            }
+        });
+    }
+    /**
      * Get thumbnail photos for the users.
      * @param users List of users
      */
@@ -315,6 +353,15 @@ export default class Helper implements IHelper {
             Status: JobStatus.Error,
             ErrorMessage: errMsg
         });
+    }
+    /**
+     * Get all the jobs items
+     */
+    public getAllJobs = async (): Promise<any[]> => {
+        return await this._web.lists.getByTitle(this.Lst_SyncJobs).items
+            .select('ID', 'Title', 'SyncedData', 'Status', 'ErrorMessage', 'SyncType', 'Created', 'Author/Title', 'Author/Id', 'Author/EMail')
+            .expand('Author')
+            .getAll();
     }
     /**
      * Azure function to update the UPS Photo properties.

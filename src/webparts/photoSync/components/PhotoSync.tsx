@@ -2,21 +2,22 @@ import * as React from 'react';
 import { useEffect, useState } from 'react';
 import styles from './PhotoSync.module.scss';
 import * as strings from 'PhotoSyncWebPartStrings';
+import { HttpClient } from '@microsoft/sp-http';
 import { DisplayMode } from '@microsoft/sp-core-library';
 import { WebPartTitle } from "@pnp/spfx-controls-react/lib/WebPartTitle";
 import { ProgressIndicator } from 'office-ui-fabric-react/lib/ProgressIndicator';
 import { Pivot, PivotItem } from 'office-ui-fabric-react/lib/Pivot';
 import { AppContext, AppContextProps } from '../common/AppContext';
-import Helper, { IHelper } from '../common/helper';
+import { IHelper } from '../common/helper';
 import ConfigPlaceholder from '../common/ConfigPlaceholder';
-import BulkPhotoSync from './BulkPhotoSync';
 import { IPropertyFieldGroupOrPerson } from '@pnp/spfx-property-controls/lib/propertyFields/peoplePicker';
 import MessageContainer from '../common/MessageContainer';
 import { MessageScope, IUserInfo, IAzFuncValues } from '../common/IModel';
 import { WebPartContext } from '@microsoft/sp-webpart-base';
 import UserSelectionSync from './UserSelectionSync';
-import { HttpClient } from '@microsoft/sp-http';
-import { PeoplePicker, PrincipalType } from '@pnp/spfx-controls-react/lib/controls/peoplepicker';
+import BulkPhotoSync from './BulkPhotoSync';
+import SyncJobs from './SyncJobs';
+
 
 const map: any = require('lodash/map');
 
@@ -173,7 +174,7 @@ const PhotoSync: React.FunctionComponent<IPhotoSyncProps> = (props) => {
                                                                                 <Pivot defaultSelectedKey="0" selectedKey={selectedMenu} onLinkClick={_onMenuClick} className={styles.periodmenu}>
                                                                                     <PivotItem headerText={strings.TabMenu1} itemKey="0" itemIcon="SchoolDataSyncLogo" headerButtonProps={headerButtonProps}></PivotItem>
                                                                                     {pivotItems}
-                                                                                    <PivotItem headerText={strings.TabMenu3} itemKey="3" itemIcon="SyncStatus" headerButtonProps={headerButtonProps}></PivotItem>
+                                                                                    <PivotItem headerText={strings.TabMenu3} itemKey="2" itemIcon="SyncStatus" headerButtonProps={headerButtonProps}></PivotItem>
                                                                                 </Pivot>
                                                                             </div>
                                                                             {/* Individual Selection photo sync */}
@@ -188,7 +189,7 @@ const PhotoSync: React.FunctionComponent<IPhotoSyncProps> = (props) => {
                                                                             }
                                                                             {/* Overall status of the sync jobs */}
                                                                             {selectedMenu == "2" &&
-                                                                                <></>
+                                                                                <SyncJobs dateFormat={props.dateFormat} />
                                                                             }
                                                                         </>
                                                                     )}

@@ -44,6 +44,8 @@ define([], function () {
         EmptyPhotoMsg: "Photo not found!",
         BulkSyncNote: "The photo filename should be in the format 'LoginID.png'. Supported image types are '.png', '.jpeg', '.jpg'. Photo(s) with invalid filename will not be processed.",
         BulkPhotoDragDrop: "Drag 'n' drop the photos, or click to select the photos",
+        JobsListLoaderDesc: "Loading the jobs list...",
+        EmptyTable: "Sorry, no data to be displayed!",
 
         TabMenu1: "User Selection Photo Sync",
         TabMenu2: "Bulk Sync",

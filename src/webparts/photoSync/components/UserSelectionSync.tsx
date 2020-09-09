@@ -11,7 +11,6 @@ import { Spinner } from 'office-ui-fabric-react/lib/Spinner';
 import { DetailsList, IColumn, DetailsListLayoutMode, ConstrainMode, SelectionMode } from 'office-ui-fabric-react/lib/DetailsList';
 import { IPersonaSharedProps, Persona, PersonaSize } from 'office-ui-fabric-react/lib/Persona';
 import styles from './PhotoSync.module.scss';
-import { divProperties } from 'office-ui-fabric-react/lib/Utilities';
 
 const filter: any = require('lodash/filter');
 const map: any = require('lodash/map');
