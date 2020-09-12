@@ -16,11 +16,15 @@ import { ISiteUserInfo, ISiteUser } from "@pnp/sp/site-users/types";
 import { PnPClientStorage, dateAdd } from '@pnp/common';
 import { IUserInfo, IUserPickerInfo, SyncType, JobStatus, IAzFuncValues } from './IModel';
 import * as moment from 'moment';
+import ImageResize from 'image-resize';
 
 import "@pnp/sp/search";
 import { SearchQueryBuilder, SearchResults, ISearchQuery } from "@pnp/sp/search";
 
 const storage = new PnPClientStorage();
+const imgResize_48 = new ImageResize({ format: 'png', width: 48, height: 48, output: 'base64' });
+const imgResize_96 = new ImageResize({ format: 'png', width: 96, height: 96, output: 'base64' });
+const imgResize_240 = new ImageResize({ format: 'png', width: 240, height: 240, output: 'base64' });
 
 const map: any = require('lodash/map');
 const intersection: any = require('lodash/intersection');
@@ -41,6 +45,7 @@ export interface IHelper {
     getUsersInfo: (UserIds: string[]) => Promise<any[]>;
     getUserPhotoFromAADForDisplay: (users: IUserPickerInfo[]) => Promise<any[]>;
     getAndStoreUserThumbnailPhotos: (users: IUserPickerInfo[], tempLibId: string) => Promise<IAzFuncValues[]>;
+    generateAndStorePhotoThumbnails: (fileInfo: any[], tempLibId: string) => void;
     createSyncItem: (syncType: SyncType) => Promise<number>;
     updateSyncItem: (itemid: number, inputJson: string) => void;
     getAllJobs: () => Promise<any[]>;
@@ -200,14 +205,14 @@ export default class Helper implements IHelper {
                             finalResponse.push({
                                 'loginname': userid,
                                 'title': userinfo.Title,
-                                'status': 'Success'
+                                'status': 'Valid'
                             });
                         }
                     }).catch((e) => {
                         finalResponse.push({
                             'loginname': userid,
                             'title': 'User not found!',
-                            'status': 'Failed'
+                            'status': 'Invalid'
                         });
                     });
                 });
@@ -260,7 +265,7 @@ export default class Helper implements IHelper {
                         let graphRes: any = await this._graphClient.api('$batch').post(photoReq);
                         finalResponse.push(graphRes);
                     })).then(async () => {
-                        retVals = await this.saveThumbnailPhotosInDocLib(finalResponse, tempLibUrl);
+                        retVals = await this.saveThumbnailPhotosInDocLib(finalResponse, tempLibUrl, "Manual");
                     });
                 } else {
                     users.map((user: IUserPickerInfo) => {
@@ -287,7 +292,7 @@ export default class Helper implements IHelper {
                     });
                     let photoReq: any = { requests: requests };
                     finalResponse.push(await this._graphClient.api('$batch').post(photoReq));
-                    retVals = await this.saveThumbnailPhotosInDocLib(finalResponse, tempLibUrl);
+                    retVals = await this.saveThumbnailPhotosInDocLib(finalResponse, tempLibUrl, "Manual");
                 }
             }
             res(retVals);
@@ -296,33 +301,76 @@ export default class Helper implements IHelper {
     /**
      * Add thumbnails to the configured document library
      */
-    private saveThumbnailPhotosInDocLib = async (thumbnails: any[], tempLibName: string): Promise<IAzFuncValues[]> => {
+    private saveThumbnailPhotosInDocLib = async (thumbnails: any[], tempLibName: string, scope: 'Manual' | 'Bulk'): Promise<IAzFuncValues[]> => {
         let retVals: IAzFuncValues[] = [];
         if (thumbnails && thumbnails.length > 0) {
-            thumbnails.map(res => {
-                if (res.responses && res.responses.length > 0) {
-                    res.responses.map(async thumbnail => {
-                        if (!thumbnail.body.error) {
-                            let username: string = thumbnail.id.split('_')[0].split('|')[2];
-                            let userFilename: string = username.replace(/[@.]/g, '_');
-                            let filecontent = this.dataURItoBlob("data:image/jpg;base64," + thumbnail.body);
-                            let partFileName = '';
-                            retVals.push({
-                                userid: username,
-                                picturename: userFilename
-                            });
-                            if (thumbnail.id.indexOf('_1') > 0) partFileName = 'SThumb.jpg';
-                            else if (thumbnail.id.indexOf('_2') > 0) partFileName = "MThumb.jpg";
-                            else if (thumbnail.id.indexOf('_3') > 0) partFileName = "LThumb.jpg";
-                            await sp.web.getFolderByServerRelativeUrl(decodeURI(`${tempLibName}/`))
-                                .files
-                                .add(decodeURI(`${tempLibName}/${userFilename}_` + partFileName), filecontent, true);
-                        }
+            if (scope === "Manual") {
+                thumbnails.map(res => {
+                    if (res.responses && res.responses.length > 0) {
+                        res.responses.map(async thumbnail => {
+                            if (!thumbnail.body.error) {
+                                let username: string = thumbnail.id.split('_')[0].split('|')[2];
+                                let userFilename: string = username.replace(/[@.]/g, '_');
+                                let filecontent = this.dataURItoBlob("data:image/jpg;base64," + thumbnail.body);
+                                let partFileName = '';
+                                retVals.push({
+                                    userid: username,
+                                    picturename: userFilename
+                                });
+                                if (thumbnail.id.indexOf('_1') > 0) partFileName = 'SThumb.jpg';
+                                else if (thumbnail.id.indexOf('_2') > 0) partFileName = "MThumb.jpg";
+                                else if (thumbnail.id.indexOf('_3') > 0) partFileName = "LThumb.jpg";
+                                await sp.web.getFolderByServerRelativeUrl(decodeURI(`${tempLibName}/`))
+                                    .files
+                                    .add(decodeURI(`${tempLibName}/${userFilename}_` + partFileName), filecontent, true);
+                            }
+                        });
+                    }
+                });
+                return retVals;
+            }
+            if (scope === "Bulk") {
+                return new Promise((res, rej) => {
+                    let batch = sp.createBatch();
+                    thumbnails.map(async thumbnail => {
+                        console.log(thumbnail);
+                        let username: string = thumbnail.name.replace('.' + thumbnail.name.split('.').pop(), '');
+                        let userFilename: string = username.replace(/[@.]/g, '_');
+                        retVals.push({
+                            userid: username,
+                            picturename: userFilename
+                        });
+                        let filecontent_48 = this.dataURItoBlob(thumbnail.Thumb48);
+                        sp.web.getFolderByServerRelativeUrl(decodeURI(`${tempLibName}/`))
+                            .files.inBatch(batch)
+                            .add(decodeURI(`${tempLibName}/${userFilename}_` + 'SThumb.jpg'), filecontent_48, true);
+                        let filecontent_96 = this.dataURItoBlob(thumbnail.Thumb96);
+                        sp.web.getFolderByServerRelativeUrl(decodeURI(`${tempLibName}/`))
+                            .files.inBatch(batch)
+                            .add(decodeURI(`${tempLibName}/${userFilename}_` + 'MThumb.jpg'), filecontent_96, true);
+                        let filecontent_240 = this.dataURItoBlob(thumbnail.Thumb240);
+                        sp.web.getFolderByServerRelativeUrl(decodeURI(`${tempLibName}/`))
+                            .files.inBatch(batch)
+                            .add(decodeURI(`${tempLibName}/${userFilename}_` + 'LThumb.jpg'), filecontent_240, true);
                     });
-                }
+                    batch.execute().then(() => { res(retVals); });
+                });
+            }
+        }
+    }
+    public generateAndStorePhotoThumbnails = async (fileInfo: any[], tempLibId: string) => {
+        if (fileInfo && fileInfo.length > 0) {
+            let tempLibUrl: string = await this.getLibraryDetails(tempLibId);
+            Promise.all(fileInfo.map(async file => {
+                file['Thumb48'] = await imgResize_48.play(URL.createObjectURL(file));
+                file['Thumb96'] = await imgResize_96.play(URL.createObjectURL(file));
+                file['Thumb240'] = await imgResize_240.play(URL.createObjectURL(file));
+            })).then(async () => {
+                console.log("Fileinfo: ", fileInfo);
+                let res: any = await this.saveThumbnailPhotosInDocLib(fileInfo, tempLibUrl, "Bulk");
+                console.log("Generated thumbnails: ", res);
             });
         }
-        return retVals;
     }
     /**
      * Create a sync item

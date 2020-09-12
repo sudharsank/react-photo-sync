@@ -45,10 +45,15 @@
         max-height: 500px;
         overflow-y: auto;
     }
+    .dropZonedisabled {
+        border-color: #CCC !important;
+        background-color: lightgrey !important;
+        cursor: not-allowed;
+    }
   .dropZoneContainer {
     display: flex;
     flex-direction: column;
-    font-family: sans-serif;
+    font-family: sans-serif;    
     .dropzone {
         flex: 1;
         display: flex;

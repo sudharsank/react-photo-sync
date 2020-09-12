@@ -141,8 +141,7 @@ const UserSelectionSync: React.FunctionComponent<IUserSelectionSyncProps> = (pro
     };
     /**
      * To download the photo thumbnails from Azure to document library.
-     * To send the updated final json to the Azure function to trigger the job
-     * for photo sync
+     * To send the updated final json to the Azure function to trigger the job for photo sync
      */
     const _syncPhotoToSPUPS = async () => {
         toggleProcessingPhotoUpdate();
