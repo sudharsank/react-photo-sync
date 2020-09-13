@@ -1,38 +1,36 @@
 import * as React from 'react';
 import { useEffect, useState, useContext } from 'react';
 import { useBoolean } from '@uifabric/react-hooks';
+import styles from './PhotoSync.module.scss';
 import * as strings from 'PhotoSyncWebPartStrings';
-import { AppContext, AppContextProps } from '../common/AppContext';
 import { PeoplePicker, PrincipalType } from "@pnp/spfx-controls-react/lib/PeoplePicker";
-import MessageContainer from '../common/MessageContainer';
 import { MessageScope, IUserPickerInfo, IAzFuncValues, SyncType } from '../common/IModel';
 import { PrimaryButton } from 'office-ui-fabric-react/lib/components/Button';
 import { Spinner } from 'office-ui-fabric-react/lib/Spinner';
 import { DetailsList, IColumn, DetailsListLayoutMode, ConstrainMode, SelectionMode } from 'office-ui-fabric-react/lib/DetailsList';
 import { IPersonaSharedProps, Persona, PersonaSize } from 'office-ui-fabric-react/lib/Persona';
-import styles from './PhotoSync.module.scss';
+import { AppContext, AppContextProps } from '../common/AppContext';
+import MessageContainer from '../common/MessageContainer';
 
 const filter: any = require('lodash/filter');
 const map: any = require('lodash/map');
 const uniqBy: any = require('lodash/uniqBy');
 
 export interface IUserSelectionSyncProps {
-    updateSPWithPhoto: (data: IAzFuncValues[], itemid: number) => Promise<boolean>;
+    updateSPWithPhoto: (data: IAzFuncValues[], itemid: number) => void;
 }
 
 const UserSelectionSync: React.FunctionComponent<IUserSelectionSyncProps> = (props) => {
     const appContext: AppContextProps = useContext(AppContext);
     const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
-    const [reloadGetProperties, setReloadGetProperties] = useState<boolean>(false);
-    const [clearData, { toggle: toggleClearData, setFalse: hideClearData }] = useBoolean(false);
     const [showPhotoLoader, { toggle: togglePhotoLoader, setFalse: hidePhotoLoader }] = useBoolean(false);
     const [disableButton, { toggle: toggleDisableButton, setFalse: enableButton }] = useBoolean(false);
     const [disableUserPicker, { toggle: toggleDisableUserPicker }] = useBoolean(false);
     const [columns, setColumns] = useState<IColumn[]>([]);
     const [processingPhotoUpdate, { toggle: toggleProcessingPhotoUpdate }] = useBoolean(false);
     const [showUpdateButton, { toggle: toggleShowUpdateButton, setFalse: hideUpdateButton }] = useBoolean(false);
-    const [message, setMessage] = useState<string>('');
-    const [smgScope, setMessageScope] = useState<MessageScope>(MessageScope.Info);
+    const [message, setMessage] = useState<any>({ Message: '', Scope: MessageScope.Info });
+
     /**
      * Build columns for Datalist.     
      */
@@ -136,8 +134,7 @@ const UserSelectionSync: React.FunctionComponent<IUserSelectionSyncProps> = (pro
         toggleDisableUserPicker();
         togglePhotoLoader();
         toggleShowUpdateButton();
-        setMessageScope(MessageScope.Info);
-        setMessage(strings.NoAADPhotos);
+        setMessage({Message: strings.NoAADPhotos, Scope: MessageScope.Info});
     };
     /**
      * To download the photo thumbnails from Azure to document library.
@@ -146,25 +143,17 @@ const UserSelectionSync: React.FunctionComponent<IUserSelectionSyncProps> = (pro
     const _syncPhotoToSPUPS = async () => {
         toggleProcessingPhotoUpdate();
         let finalUsers: any[] = filter(selectedUsers, (o) => { return o.AADPhotoUrl; });
-        //console.log(finalUsers);
         let userVals: IAzFuncValues[] = await appContext.helper.getAndStoreUserThumbnailPhotos(finalUsers, appContext.tempLib);
-        //console.log("Users: ", uniqBy(userVals, 'userid'));
         let itemID = await appContext.helper.createSyncItem(SyncType.Manual);
-        //console.log("Item ID: ", itemID);
         await props.updateSPWithPhoto(uniqBy(userVals, 'userid'), itemID);
         setSelectedUsers([]);
         toggleProcessingPhotoUpdate();
-        setMessageScope(MessageScope.Success);
-        setMessage(strings.UpdateProcessInitialized);
+        setMessage({ Message: strings.UpdateProcessInitialized, Scope: MessageScope.Success });
     };
-
-    useEffect(() => {
-
-    }, []);
     return (
         <div>
-            {message && message.length > 0 &&
-                <MessageContainer MessageScope={smgScope} Message={message} />
+            {message && message.Message && message.Message.length > 0 &&
+                <MessageContainer MessageScope={message.Scope} Message={message.Message} />
             }
             <PeoplePicker
                 disabled={disableUserPicker || processingPhotoUpdate}
@@ -180,23 +169,6 @@ const UserSelectionSync: React.FunctionComponent<IUserSelectionSyncProps> = (pro
                 selectedItems={_selectedItems}
                 defaultSelectedUsers={selectedUsers.length > 0 ? _getSelectedUsersLoginNames(selectedUsers) : []}
             />
-            {/* {reloadGetProperties ? (
-                <>
-                    {selectedUsers.length > 0 &&
-                        <div>
-                            <MessageContainer MessageScope={MessageScope.Info} Message={strings.Photo_UserListChanges} />
-                        </div>
-                    }
-                    {selectedUsers.length <= 0 && !clearData &&
-                        <div>
-                            <MessageContainer MessageScope={MessageScope.Info} Message={strings.Photo_UserListEmpty} ShowDismiss={true} />
-                        </div>
-                    }
-                </>
-            ) : (
-                    <></>
-                )
-            } */}
             {selectedUsers && selectedUsers.length > 0 &&
                 <>
                     <div style={{ marginTop: "5px" }}>

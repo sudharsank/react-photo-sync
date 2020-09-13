@@ -45,6 +45,9 @@ declare interface IPhotoSyncWebPartStrings {
     BulkPhotoDragDrop: string;
     JobsListLoaderDesc: string;
     EmptyTable: string;
+    JobResultsDialogTitle: string;
+    JobResultsLoaderDesc: string;
+    SyncFailedErrorMessage: string;
 
     TabMenu1: string;
     TabMenu2: string;

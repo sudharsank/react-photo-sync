@@ -1,5 +1,6 @@
 import * as React from 'react';
 import * as ReactDom from 'react-dom';
+import * as strings from 'PhotoSyncWebPartStrings';
 import { Version } from '@microsoft/sp-core-library';
 import {
     IPropertyPaneConfiguration,
@@ -14,12 +15,11 @@ import { PropertyFieldToggleWithCallout } from '@pnp/spfx-property-controls/lib/
 import { PropertyPaneWebPartInformation } from '@pnp/spfx-property-controls/lib/PropertyPaneWebPartInformation';
 import { PropertyFieldPeoplePicker, PrincipalType, IPropertyFieldGroupOrPerson } from '@pnp/spfx-property-controls/lib/PropertyFieldPeoplePicker';
 
-import * as strings from 'PhotoSyncWebPartStrings';
-import PhotoSync from './components/PhotoSync';
-import { IPhotoSyncProps } from './components/PhotoSync';
 import { MSGraphClient } from '@microsoft/sp-http';
 import { sp } from '@pnp/sp';
 import { ISiteUserInfo } from '@pnp/sp/site-users/types';
+import { IPhotoSyncProps } from './components/PhotoSync';
+import PhotoSync from './components/PhotoSync';
 import Helper, { IHelper } from './common/helper';
 
 export interface IPhotoSyncWebPartProps {

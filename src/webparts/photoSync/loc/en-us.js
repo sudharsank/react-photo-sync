@@ -46,6 +46,9 @@ define([], function () {
         BulkPhotoDragDrop: "Drag 'n' drop the photos, or click to select the photos",
         JobsListLoaderDesc: "Loading the jobs list...",
         EmptyTable: "Sorry, no data to be displayed!",
+        JobResultsDialogTitle: "Users list with photo updated!",
+        JobResultsLoaderDesc: "Loading the results...",
+        SyncFailedErrorMessage: "Oops, there is an error while updating the properties. Error Message:",
 
         TabMenu1: "User Selection Photo Sync",
         TabMenu2: "Bulk Sync",

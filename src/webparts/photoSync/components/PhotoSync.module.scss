@@ -103,8 +103,9 @@
             }
         }
     }
-  }
-  .fieldCustomizer {
+  } 
+}
+.fieldCustomizer {
 	min-height: 30px;
 	display: -webkit-box;
 	display: -ms-flexbox;
@@ -149,10 +150,19 @@
     .fieldContent.purplebgColor {background-color: #c0b1e6;}
     .fieldContent.yellowbgColor {background-color: #fbe3c4;}
 }
-    .redBox {color: rgb(161, 10, 10);}
-    .greenBox{color: rgb(7, 133, 7);}
-    .orangeBox {color: #e35e32;}
-    .blueBox {color: #0c90b1;}
-    .purpleBox {color: #2d0988;}
-    .yellowBox {color: rgb(126, 75, 9);}
+.redBox {color: rgb(161, 10, 10);}
+.greenBox{color: rgb(7, 133, 7);}
+.orangeBox {color: #e35e32;}
+.blueBox {color: #0c90b1;}
+.purpleBox {color: #2d0988;}
+.yellowBox {color: rgb(126, 75, 9);}
+.searchcontainer {
+    width: 95%;
+    display: inline-block;
+}
+.refreshContainer {
+    display: inline-flex;  
+    margin-top: 6px;
+    margin-left: 5px;
+    position: absolute;
 }

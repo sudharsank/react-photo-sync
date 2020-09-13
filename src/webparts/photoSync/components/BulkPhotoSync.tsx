@@ -5,7 +5,7 @@ import styles from './PhotoSync.module.scss';
 import * as strings from 'PhotoSyncWebPartStrings';
 import { AppContext, AppContextProps } from '../common/AppContext';
 import MessageContainer from '../common/MessageContainer';
-import { MessageScope, IUserPickerInfo } from '../common/IModel';
+import { MessageScope, IUserPickerInfo, IAzFuncValues, SyncType } from '../common/IModel';
 import { PrimaryButton } from 'office-ui-fabric-react/lib/components/Button';
 import { Spinner } from 'office-ui-fabric-react/lib/Spinner';
 import { ProgressIndicator } from 'office-ui-fabric-react/lib/ProgressIndicator';
@@ -18,9 +18,10 @@ import { css } from 'office-ui-fabric-react/lib/Utilities';
 const map: any = require('lodash/map');
 const find: any = require('lodash/find');
 const filter: any = require('lodash/filter');
+const uniqBy: any = require('lodash/uniqBy');
 
 export interface IBulkPhotoSyncProps {
-
+    updateSPWithPhoto: (data: IAzFuncValues[], itemid: number) => void;
 }
 
 const BulkPhotoSync: React.FC<IBulkPhotoSyncProps> = (props) => {
@@ -30,6 +31,8 @@ const BulkPhotoSync: React.FC<IBulkPhotoSyncProps> = (props) => {
     const [showUpdateButton, { setTrue: enableUpdateButton, setFalse: hideUpdateButton }] = useBoolean(false);
     const [processingPhotoUpdate, { setTrue: showPhotoUpdateProcessing, setFalse: hidePhotoUpdateProcessing }] = useBoolean(false);
     const [disableUpload, { toggle: toggleDisableUpload }] = useBoolean(false);
+    const [message, setMessage] = useState<any>({ Message: '', Scope: MessageScope.Info });
+    const [clearItems, setclearItems] = useState<boolean>(false);
     const { getRootProps, getInputProps, fileRejections, acceptedFiles } = useDropzone({
         accept: 'image/jpeg, image/jpg, image/png',
         disabled: disableUpload,
@@ -148,20 +151,21 @@ const BulkPhotoSync: React.FC<IBulkPhotoSyncProps> = (props) => {
         toggleDisableUpload();
         let finalFiles = filter(acceptedFiles, (o) => { return o.status.toLowerCase() == "valid"; });
         console.log(finalFiles);
-        appContext.helper.generateAndStorePhotoThumbnails(finalFiles, appContext.tempLib);
+        let userVals: IAzFuncValues[] = await appContext.helper.generateAndStorePhotoThumbnails(finalFiles, appContext.tempLib);
+        let itemID = await appContext.helper.createSyncItem(SyncType.Bulk);
+        await props.updateSPWithPhoto(uniqBy(userVals, 'userid'), itemID);
         toggleDisableUpload();
         hidePhotoUpdateProcessing();
         hideUpdateButton();
+        setclearItems(true);
+        setMessage({ Message: strings.UpdateProcessInitialized, Scope: MessageScope.Success });
     };
 
     useEffect(() => {
+        setMessage({ Message: '' });
+        setclearItems(false);
         _listUploadedFiles();
     }, [acceptedFiles]);
-    // useEffect(() => () => {
-    //     console.log('yes');
-    //     // Make sure to revoke the data uris to avoid memory leaks
-    //     files.forEach(file => URL.revokeObjectURL(file.preview));
-    // }, [files]);
     return (
         <div>
             <div style={{ margin: '5px 0px' }}>
@@ -179,11 +183,14 @@ const BulkPhotoSync: React.FC<IBulkPhotoSyncProps> = (props) => {
             {loading &&
                 <ProgressIndicator label="Loading Photos..." description="Please wait..." />
             }
-            {!loading && acceptedFiles && acceptedFiles.length > 0 &&
+            {!loading && message && message.Message && message.Message.length > 0 &&
+                <MessageContainer MessageScope={message.Scope} Message={message.Message} />
+            }
+            {!loading && !clearItems && acceptedFiles && acceptedFiles.length > 0 &&
                 <>
                     <div className={styles.detailsListContainer}>
                         <DetailsList
-                            items={acceptedFiles}
+                            items={clearItems ? [] : acceptedFiles}
                             setKey="set"
                             columns={columns}
                             compact={true}

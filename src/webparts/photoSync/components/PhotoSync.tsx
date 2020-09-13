@@ -42,13 +42,13 @@ export interface IPhotoSyncProps {
 }
 
 const PhotoSync: React.FunctionComponent<IPhotoSyncProps> = (props) => {
-    //const headerButtonProps = { 'disabled': showUploadProgress || updatePropsLoader_Manual || updatePropsLoader_Azure || updatePropsLoader_Bulk };
-    const headerButtonProps = { 'disabled': false };
     const [loading, setLoading] = useState<boolean>(true);
     const [accessDenied, setAccessDenied] = useState<boolean>(false);
     const [listExists, setListExists] = useState<boolean>(false);
     const [selectedMenu, setSelectedMenu] = useState<string>('0');
     const [pivotItems, setPivotItems] = useState<any[]>([]);
+    const [disablePivot, setdisablePivot] = useState<boolean>(false);
+    const headerButtonProps = { 'disabled': disablePivot };
 
     const parentCtxValues: AppContextProps = {
         context: props.context,
@@ -73,7 +73,8 @@ const PhotoSync: React.FunctionComponent<IPhotoSyncProps> = (props) => {
     };
     const _checkAndCreateLists = async () => {
         setLoading(false);
-        setListExists(true);
+        let listCheck: boolean = await props.helper.checkAndCreateLists();
+        if (listCheck) setListExists(true);
     };
     const _checkForAccess = async () => {
         setLoading(true);
@@ -120,19 +121,22 @@ const PhotoSync: React.FunctionComponent<IPhotoSyncProps> = (props) => {
             userPhotoObj['mysiteurl'] = `${tenantName}-my.${props.domainName}`;
             userPhotoObj['targetSiteUrl'] = props.siteUrl;
             userPhotoObj['picfolder'] = folderPath + "/";
+            userPhotoObj['clearPhotos'] = props.deleteThumbnails;
             userPhotoObj['usecert'] = props.UseCert ? props.UseCert : false;
             userPhotoObj['itemId'] = itemid;
             userPhotoObj['value'] = data;
             finalJson = JSON.stringify(userPhotoObj);
         }
+        console.log(finalJson);
         return finalJson;
     };
-    const _updateSPWithPhoto = async (data: IAzFuncValues[], itemid: number): Promise<boolean> => {
+    const _updateSPWithPhoto = async (data: IAzFuncValues[], itemid: number) => {
+        setdisablePivot(true);
         let tempFolderPath: string = await props.helper.getLibraryDetails(props.tempLib);
         let finalJson: string = _prepareJSONForAzFunc(data, itemid, tempFolderPath);
         await props.helper.updateSyncItem(itemid, finalJson);
         props.helper.runAzFunction(props.httpClient, finalJson, props.AzFuncUrl, itemid);
-        return true;
+        setdisablePivot(false);
     };
 
     useEffect(() => {
@@ -185,7 +189,7 @@ const PhotoSync: React.FunctionComponent<IPhotoSyncProps> = (props) => {
                                                                             }
                                                                             {/* Bulk photo sync */}
                                                                             {selectedMenu == "1" &&
-                                                                                <BulkPhotoSync />
+                                                                                <BulkPhotoSync updateSPWithPhoto={_updateSPWithPhoto} />
                                                                             }
                                                                             {/* Overall status of the sync jobs */}
                                                                             {selectedMenu == "2" &&

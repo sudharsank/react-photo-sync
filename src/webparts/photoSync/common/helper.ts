@@ -8,6 +8,8 @@ import "@pnp/sp/profiles";
 import "@pnp/sp/webs";
 import "@pnp/sp/lists";
 import "@pnp/sp/items";
+import "@pnp/sp/fields/list";
+import "@pnp/sp/views/list";
 import "@pnp/sp/site-users";
 import "@pnp/sp/files";
 import "@pnp/sp/folders";
@@ -20,6 +22,7 @@ import ImageResize from 'image-resize';
 
 import "@pnp/sp/search";
 import { SearchQueryBuilder, SearchResults, ISearchQuery } from "@pnp/sp/search";
+import { ChoiceFieldFormatType } from '@pnp/sp/fields/types';
 
 const storage = new PnPClientStorage();
 const imgResize_48 = new ImageResize({ format: 'png', width: 48, height: 48, output: 'base64' });
@@ -45,11 +48,12 @@ export interface IHelper {
     getUsersInfo: (UserIds: string[]) => Promise<any[]>;
     getUserPhotoFromAADForDisplay: (users: IUserPickerInfo[]) => Promise<any[]>;
     getAndStoreUserThumbnailPhotos: (users: IUserPickerInfo[], tempLibId: string) => Promise<IAzFuncValues[]>;
-    generateAndStorePhotoThumbnails: (fileInfo: any[], tempLibId: string) => void;
+    generateAndStorePhotoThumbnails: (fileInfo: any[], tempLibId: string) => Promise<IAzFuncValues[]>;
     createSyncItem: (syncType: SyncType) => Promise<number>;
     updateSyncItem: (itemid: number, inputJson: string) => void;
     getAllJobs: () => Promise<any[]>;
     runAzFunction: (httpClient: HttpClient, inputData: any, azFuncUrl: string, itemid: number) => void;
+    checkAndCreateLists: () => Promise<boolean>;
 }
 
 export default class Helper implements IHelper {
@@ -358,19 +362,24 @@ export default class Helper implements IHelper {
             }
         }
     }
-    public generateAndStorePhotoThumbnails = async (fileInfo: any[], tempLibId: string) => {
-        if (fileInfo && fileInfo.length > 0) {
-            let tempLibUrl: string = await this.getLibraryDetails(tempLibId);
-            Promise.all(fileInfo.map(async file => {
-                file['Thumb48'] = await imgResize_48.play(URL.createObjectURL(file));
-                file['Thumb96'] = await imgResize_96.play(URL.createObjectURL(file));
-                file['Thumb240'] = await imgResize_240.play(URL.createObjectURL(file));
-            })).then(async () => {
-                console.log("Fileinfo: ", fileInfo);
-                let res: any = await this.saveThumbnailPhotosInDocLib(fileInfo, tempLibUrl, "Bulk");
-                console.log("Generated thumbnails: ", res);
-            });
-        }
+    public generateAndStorePhotoThumbnails = async (fileInfo: any[], tempLibId: string): Promise<IAzFuncValues[]> => {
+        return new Promise(async (res, rej) => {
+            if (fileInfo && fileInfo.length > 0) {
+                let tempLibUrl: string = await this.getLibraryDetails(tempLibId);
+                Promise.all(fileInfo.map(async file => {
+                    file['Thumb48'] = await imgResize_48.play(URL.createObjectURL(file));
+                    file['Thumb96'] = await imgResize_96.play(URL.createObjectURL(file));
+                    file['Thumb240'] = await imgResize_240.play(URL.createObjectURL(file));
+                })).then(async () => {
+                    console.log("Fileinfo: ", fileInfo);
+                    let users: any = await this.saveThumbnailPhotosInDocLib(fileInfo, tempLibUrl, "Bulk");
+                    res(users);
+                }).catch(err => {
+                    console.log("Error while generating thumbnails: ", err);
+                    res([]);
+                });
+            }
+        });
     }
     /**
      * Create a sync item
@@ -427,6 +436,44 @@ export default class Helper implements IHelper {
             await this.updateSyncItemStatus(itemid, `${response.status} - ${response.statusText}`);
         }
         console.log("Azure Function executed");
+    }
+    /**
+     * Check and create the required lists
+     */
+    public checkAndCreateLists = async (): Promise<boolean> => {
+        return new Promise<boolean>(async (res, rej) => {
+            try {
+                await this._web.lists.getByTitle(this.Lst_SyncJobs).get();
+                console.log('Sync Jobs List Exists');
+            } catch (err) {
+                console.log("Sync Jobs List doesn't exists, so creating...");
+                await this._createSyncJobsList();
+                console.log("Sync Jobs List created");
+            }
+            console.log("Checked all lists");
+            res(true);
+        });
+    }
+    /**
+     * Create Sync Jobs list
+     */
+    public _createSyncJobsList = async () => {
+        let listExists = await (await sp.web.lists.ensure(this.Lst_SyncJobs)).list;
+        await listExists.fields.addMultilineText('SyncData', 6, false, false, false, false, { Required: true, Description: 'Data sent to Azure function for property update.' });
+        await listExists.fields.addMultilineText('SyncedData', 6, false, false, false, false, { Required: true, Description: 'Data received from Azure function with property update status.' });
+        await listExists.fields.addChoice('Status', ['Submitted', 'In-Progress', 'Completed', 'Error'], ChoiceFieldFormatType.Dropdown, false, { Required: true, Description: 'Status of the job.' });
+        await listExists.fields.addMultilineText('ErrorMessage', 6, false, false, false, false, { Required: false, Description: 'Store the error message while calling Azure function.' });
+        await listExists.fields.addChoice('SyncType', ['Manual', 'Azure', 'Template'], ChoiceFieldFormatType.Dropdown, false, { Required: true, Description: 'Type of data sent to Azure function.' });
+        let allItemsView = await listExists.views.getByTitle('All Items');
+        let batch = sp.createBatch();
+        allItemsView.fields.inBatch(batch).add('ID');
+        allItemsView.fields.inBatch(batch).add('SyncData');
+        allItemsView.fields.inBatch(batch).add('SyncedData');
+        allItemsView.fields.inBatch(batch).add('Status');
+        allItemsView.fields.inBatch(batch).add('ErrorMessage');
+        allItemsView.fields.inBatch(batch).add('SyncType');
+        allItemsView.fields.inBatch(batch).move('ID', 0);
+        await batch.execute();
     }
 
     // public async componentDidMount() {
